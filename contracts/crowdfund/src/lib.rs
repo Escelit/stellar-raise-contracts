@@ -895,11 +895,116 @@ impl CrowdfundContract {
         let token_client = token::Client::new(&env, &token_address);
 
         let contributors: Vec<Address> = env
+        // Calculate and transfer platform fee if configured.
+        let platform_config: Option<PlatformConfig> =
+            env.storage().instance().get(&DataKey::PlatformConfig);
+
+        let creator_payout = if let Some(config) = platform_config {
+            // Calculate fee using checked arithmetic to prevent overflow.
+            let fee = total
+                .checked_mul(config.fee_bps as i128)
+                .expect("fee calculation overflow")
+                .checked_div(10_000)
+                .expect("fee division by zero");
+
+            // Transfer fee to platform.
+            token_client.transfer(&env.current_contract_address(), &config.address, &fee);
+
+            // Emit event with fee details.
+            env.events()
+                .publish(("campaign", "fee_transferred"), (&config.address, fee));
+
+            // Calculate creator payout.
+            total.checked_sub(fee).expect("creator payout underflow")
+        } else {
+            total
+        };
+
+        // Transfer remainder to creator.
+        token_client.transfer(&env.current_contract_address(), &creator, &creator_payout);
+
+        env.storage().instance().set(&DataKey::TotalRaised, &0i128);
+        env.storage()
+            .instance()
+            .set(&DataKey::Status, &Status::Successful);
+
+        // Emit withdrawal event
+        env.events()
+            .publish(("campaign", "withdrawn"), (creator.clone(), total));
+
+        Ok(())
+    }
+
+    /// Refund a single contributor — pull-based model.
+    ///
+    /// This function implements a **pull-based** refund pattern where each
+    /// contributor must individually claim their refund. This is more scalable
+    /// than the previous push-based batch refund as it avoids hitting resource
+    /// limits when there are thousands of backers.
+    ///
+    /// # Pull-based Refund Model
+    ///
+    /// Instead of iterating over all contributors in a single transaction
+    /// (which would fail with thousands of backers due to resource limits),
+    /// each contributor must claim their own refund individually by calling
+    /// this function with their address.
+    ///
+    /// # Arguments
+    /// * `contributor` – The address of the contributor requesting a refund.
+    ///
+    /// # Requirements
+    /// * The campaign status must be Active.
+    /// * The deadline must have passed.
+    /// * The funding goal must not have been reached.
+    /// * The contributor must have an existing contribution.
+    ///
+    /// # Returns
+    /// Ok(()) if successful, or an error if the campaign is not eligible for
+    /// refunds.
+    ///
+    /// # Example
+    /// ```bash
+    /// stellar contract invoke \
+    ///   --id <CONTRACT_ID> \
+    ///   --network testnet \
+    ///   --source <YOUR_SECRET_KEY> \
+    ///   -- refund_single \
+    ///   --contributor <YOUR_ADDRESS>
+    /// ```
+    pub fn refund_single(env: Env, contributor: Address) -> Result<(), ContractError> {
+        // Require contributor authorization.
+        contributor.require_auth();
+
+        // Check campaign status is Active.
+        let status: Status = env.storage().instance().get(&DataKey::Status).unwrap();
+        if status != Status::Active {
+            panic!("campaign is not active");
+        }
+
+        // Check deadline has passed.
+        let deadline: u64 = env.storage().instance().get(&DataKey::Deadline).unwrap();
+        if env.ledger().timestamp() <= deadline {
+            return Err(ContractError::CampaignStillActive);
+        }
+
+        // Check goal was not reached.
+        let goal: i128 = env.storage().instance().get(&DataKey::Goal).unwrap();
+        let total: i128 = env.storage().instance().get(&DataKey::TotalRaised).unwrap();
+        if total >= goal {
+            return Err(ContractError::GoalReached);
+        }
+
+        // Get the contributor's contribution amount.
+        let contribution_key = DataKey::Contribution(contributor.clone());
+        let amount: i128 = env
             .storage()
             .persistent()
             .get(&DataKey::Contributors)
             .unwrap_or_else(|| Vec::new(&env));
 
+        // Skip if no contribution to refund.
+        if amount == 0 {
+            return Ok(());
         for contributor in contributors.iter() {
             let contribution_key = DataKey::Contribution(contributor.clone());
             let amount: i128 = env
@@ -915,6 +1020,53 @@ impl CrowdfundContract {
                     &contributor,
                     amount,
                 );
+                token_client.transfer(&env.current_contract_address(), &contributor, &amount);
+                env.storage().persistent().set(&contribution_key, &0i128);
+                env.storage()
+                    .persistent()
+                    .extend_ttl(&contribution_key, 100, 100);
+            }
+        }
+
+        env.storage().instance().set(&DataKey::TotalRaised, &0i128);
+        env.storage()
+            .instance()
+            .set(&DataKey::Status, &Status::Cancelled);
+    }
+
+    /// Cancel the campaign and refund all contributors — callable only by
+    /// the creator while the campaign is still Active.
+    pub fn cancel(env: Env) {
+        let status: Status = env.storage().instance().get(&DataKey::Status).unwrap();
+        if status != Status::Active {
+            panic!("campaign is not active");
+        }
+
+        let creator: Address = env.storage().instance().get(&DataKey::Creator).unwrap();
+        creator.require_auth();
+
+        let token_address: Address = env.storage().instance().get(&DataKey::Token).unwrap();
+        let token_client = token::Client::new(&env, &token_address);
+
+        let contributors: Vec<Address> = env
+            .storage()
+            .persistent()
+            .get(&DataKey::Contributors)
+            .unwrap();
+
+        for contributor in contributors.iter() {
+            let contribution_key = DataKey::Contribution(contributor.clone());
+            let amount: i128 = env
+                .storage()
+                .persistent()
+                .get(&contribution_key)
+                .unwrap_or(0);
+            if amount > 0 {
+                token_client.transfer(&env.current_contract_address(), &contributor, &amount);
+                env.storage().persistent().set(&contribution_key, &0i128);
+                env.storage()
+                    .persistent()
+                    .extend_ttl(&contribution_key, 100, 100);
             }
         }
 
@@ -1049,6 +1201,12 @@ impl CrowdfundContract {
         // Emit event with updated fields.
         env.events().publish(
             (Symbol::new(&env, "metadata_updated"), creator.clone()),
+        // Emit metadata_updated event with the list of updated field names.
+        env.events().publish(
+            (
+                Symbol::new(&env, "campaign"),
+                Symbol::new(&env, "metadata_updated"),
+            ),
             updated_fields,
         );
     }
