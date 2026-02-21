@@ -174,6 +174,10 @@ fn test_initialize_with_bonus_goal() {
         &None,
         &Some(2_000_000i128),
         &Some(desc.clone()),
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
     );
 
     assert_eq!(client.bonus_goal(), Some(2_000_000));
@@ -227,6 +231,20 @@ fn test_initialize_platform_fee_over_100_panics() {
         result.unwrap_err().unwrap(),
         crate::ContractError::AlreadyInitialized
     );
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
+    );
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
+    ); // should panic
 }
 
 /// Bonus goal not greater than primary goal must return InvalidBonusGoal.
@@ -392,6 +410,10 @@ fn test_withdraw_goal_not_reached_returns_error() {
         &deadline,
         &min_contribution,
         &None,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
     );
 
     let contributor = Address::generate(&env);
@@ -465,6 +487,10 @@ fn test_withdraw_mints_nft_for_each_contributor() {
         &deadline,
         &min_contribution,
         &None,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
     );
 
     let alice = Address::generate(&env);
@@ -495,6 +521,10 @@ fn test_contribute_after_deadline_panics() {
         &deadline,
         &min_contribution,
         &None,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
     );
 
     // Fast-forward past the deadline.
@@ -529,6 +559,10 @@ fn test_withdraw_after_goal_met() {
         &deadline,
         &min_contribution,
         &None,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
     );
 
     let contributor = Address::generate(&env);
@@ -566,6 +600,10 @@ fn test_withdraw_skips_nft_mint_when_contract_not_set() {
         &deadline,
         &min_contribution,
         &None,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
     );
 
     let contributor = Address::generate(&env);
@@ -603,6 +641,10 @@ fn test_withdraw_goal_not_reached_panics() {
         &deadline,
         &min_contribution,
         &None,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
     );
 
     let contributor = Address::generate(&env);
@@ -637,6 +679,10 @@ fn test_refund_single_when_goal_not_met() {
         &deadline,
         &min_contribution,
         &None,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
     );
 
     let alice = Address::generate(&env);
@@ -676,6 +722,10 @@ fn test_refund_when_goal_reached_panics() {
         &deadline,
         &min_contribution,
         &None,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
     );
 
     let contributor = Address::generate(&env);
@@ -1037,6 +1087,10 @@ fn test_double_withdraw_panics() {
         &deadline,
         &min_contribution,
         &None,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
     );
 
     let contributor = Address::generate(&env);
@@ -1068,6 +1122,10 @@ fn test_refund_returns_tokens() {
         &deadline,
         &min_contribution,
         &None,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
     );
 
     let alice = Address::generate(&env);
@@ -1140,6 +1198,10 @@ fn test_cancel_with_no_contributions() {
         &deadline,
         &min_contribution,
         &None,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
     );
 
     client.cancel();
@@ -1163,6 +1225,10 @@ fn test_cancel_with_contributions() {
         &deadline,
         &min_contribution,
         &None,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
     );
 
     let alice = Address::generate(&env);
@@ -1217,6 +1283,10 @@ fn test_cancel_by_non_creator_panics() {
         &deadline,
         &min_contribution,
         &None,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
     );
 
     env.set_auths(&[]);
@@ -1252,6 +1322,10 @@ fn test_contribute_below_minimum_panics() {
         &deadline,
         &min_contribution,
         &None,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
     );
 
     let contributor = Address::generate(&env);
@@ -1276,6 +1350,10 @@ fn test_contribute_exact_minimum() {
         &deadline,
         &min_contribution,
         &None,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
     );
 
     let contributor = Address::generate(&env);
@@ -1303,6 +1381,10 @@ fn test_contribute_above_minimum() {
         &deadline,
         &min_contribution,
         &None,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
     );
 
     let contributor = Address::generate(&env);
@@ -1315,6 +1397,81 @@ fn test_contribute_above_minimum() {
 }
 
 // ── Hard Cap Tests ─────────────────────────────────────────────────────────
+// ── Metadata Tests ─────────────────────────────────────────────────────────
+
+#[test]
+fn test_metadata_retrieval() {
+    let (env, client, creator, token_address, _admin) = setup_env();
+
+    let deadline = env.ledger().timestamp() + 3600;
+    let goal: i128 = 1_000_000;
+    let min_contribution: i128 = 1_000;
+    let category = soroban_sdk::String::from_str(&env, "Art");
+    let mut tags = soroban_sdk::Vec::new(&env);
+    tags.push_back(soroban_sdk::String::from_str(&env, "NFT"));
+    tags.push_back(soroban_sdk::String::from_str(&env, "Creative"));
+
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &category,
+        &tags,
+    );
+
+    assert_eq!(client.category(), category);
+    assert_eq!(client.tags(), tags);
+}
+
+#[test]
+fn test_empty_tags() {
+    let (env, client, creator, token_address, _admin) = setup_env();
+
+    let deadline = env.ledger().timestamp() + 3600;
+    let goal: i128 = 1_000_000;
+    let min_contribution: i128 = 1_000;
+    let category = soroban_sdk::String::from_str(&env, "Charity");
+    let tags = soroban_sdk::Vec::new(&env);
+
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &category,
+        &tags,
+    );
+
+    assert_eq!(client.category(), category);
+    assert_eq!(client.tags().len(), 0);
+}
+
+#[test]
+#[should_panic(expected = "category must not be empty")]
+fn test_initialize_empty_category_panics() {
+    let (env, client, creator, token_address, _admin) = setup_env();
+
+    let deadline = env.ledger().timestamp() + 3600;
+    let goal: i128 = 1_000_000;
+    let min_contribution: i128 = 1_000;
+    let category = soroban_sdk::String::from_str(&env, ""); // Empty category
+    let tags = soroban_sdk::Vec::new(&env);
+
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &category,
+        &tags,
+    );
+}
+
+// ── Campaign Stats Tests ───────────────────────────────────────────────────
 
 #[test]
 fn test_contribute_up_to_hard_cap() {
@@ -1465,6 +1622,10 @@ fn test_token_address_view() {
         &deadline,
         &min_contribution,
         &None,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
     );
 
     let current_time = env.ledger().timestamp();
@@ -1921,6 +2082,95 @@ fn test_get_stats() {
     mint_to(&env, &token_address, &admin, &bob, 700_000);
     client.contribute(&alice, &300_000);
     client.contribute(&bob, &700_000);
+
+    client.add_to_whitelist(&soroban_sdk::vec![&env, alice.clone(), bob.clone()]);
+
+    assert!(client.is_whitelisted(&alice));
+    assert!(client.is_whitelisted(&bob));
+
+    mint_to(&env, &token_address, &admin, &alice, 100_000);
+    mint_to(&env, &token_address, &admin, &bob, 100_000);
+
+    client.contribute(&alice, &100_000);
+    client.contribute(&bob, &100_000);
+
+    assert_eq!(client.total_raised(), 200_000);
+}
+
+#[test]
+#[should_panic]
+fn test_add_to_whitelist_non_creator_panics() {
+    let (env, client, _creator, _token_address, _admin) = setup_env();
+
+    let alice = Address::generate(&env);
+
+    // Non-creator address
+    let _attacker = Address::generate(&env);
+
+    // Mock authorization for non-creator
+    env.mock_all_auths();
+
+    // This should panic because creator.require_auth() will fail (mock_all_auths handles the auth but we check if the caller is the creator)
+    // Actually, require_auth checks if the address authorized the call.
+    // In lib.rs: let creator: Address = env.storage().instance().get(&DataKey::Creator).unwrap(); creator.require_auth();
+    // This means the 'creator' MUST authorize the call. If 'attacker' calls it, 'creator.require_auth()' will fail unless 'creator' also authorized it.
+
+    client.add_to_whitelist(&soroban_sdk::vec![&env, alice]);
+}
+
+// ── Early Withdrawal Tests ──────────────────────────────────────────────────
+
+#[test]
+fn test_partial_withdrawal() {
+    let (env, client, creator, token_address, admin) = setup_env();
+
+    let deadline = env.ledger().timestamp() + 3600;
+    let goal: i128 = 1_000_000;
+    let min_contribution: i128 = 1_000;
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+    );
+
+    let contributor = Address::generate(&env);
+    mint_to(&env, &token_address, &admin, &contributor, 500_000);
+    client.contribute(&contributor, &500_000);
+
+    assert_eq!(client.total_raised(), 500_000);
+    assert_eq!(client.contribution(&contributor), 500_000);
+
+    // Partial withdrawal.
+    client.withdraw_contribution(&contributor, &200_000);
+
+    assert_eq!(client.total_raised(), 300_000);
+    assert_eq!(client.contribution(&contributor), 300_000);
+}
+
+#[test]
+fn test_full_withdrawal_removes_contributor() {
+    let (env, client, creator, token_address, admin) = setup_env();
+
+    let deadline = env.ledger().timestamp() + 3600;
+    let goal: i128 = 1_000_000;
+    let min_contribution: i128 = 1_000;
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
+    );
+
+    let contributor = Address::generate(&env);
+    mint_to(&env, &token_address, &admin, &contributor, 500_000);
+    client.contribute(&contributor, &500_000);
 
     let stats = client.get_stats();
     assert_eq!(stats.total_raised, 1_000_000);
@@ -2843,6 +3093,8 @@ fn test_overflow_protection_preserves_contract_state() {
         &deadline,
         &min_contribution,
         &None,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
     );
 
     let alice = Address::generate(&env);
@@ -2852,6 +3104,10 @@ fn test_overflow_protection_preserves_contract_state() {
     // Alice contributes successfully
     mint_to(&env, &token_address, &admin, &alice, 300_000);
     client.contribute(&alice, &300_000);
+
+    mint_to(&env, &token_address, &admin, &alice, 600_000);
+    mint_to(&env, &token_address, &admin, &bob, 300_000);
+    mint_to(&env, &token_address, &admin, &charlie, 100_000);
 
     // Bob tries to contribute an amount that would overflow
     let overflow_amount = i128::MAX;
@@ -3365,6 +3621,15 @@ fn test_contribute_rejected_when_paused() {
     let deadline = env.ledger().timestamp() + 3600;
     let goal: i128 = 1_000_000;
     let min_contribution: i128 = 1_000;
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &soroban_sdk::String::from_str(&env, "Technology"),
+        &soroban_sdk::Vec::new(&env),
+    );
 
     client.initialize(&creator, &token_address, &goal, &deadline, &min_contribution, &None);
 

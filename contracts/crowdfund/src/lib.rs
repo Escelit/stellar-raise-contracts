@@ -260,6 +260,10 @@ pub enum ContractError {
     ContractPaused = 7,
     InvalidHardCap = 7,
     HardCapExceeded = 8,
+    /// Primary campaign category (e.g. Technology, Art).
+    Category,
+    /// Optional descriptive tags.
+    Tags,
 }
 
 /// Interface for an external NFT contract used to mint contributor rewards.
@@ -308,6 +312,16 @@ impl CrowdfundContract {
     /// * [`ContractError::DeadlineTooSoon`]       – `deadline < now + 60`.
     /// * [`ContractError::InvalidPlatformFee`]    – `fee_bps > 10_000`.
     /// * [`ContractError::InvalidBonusGoal`]      – `bonus_goal <= goal`.
+    /// # Panics
+    /// * If already initialized.
+    /// * If platform fee exceeds 10,000 (100%).
+    /// * `creator`          – The campaign creator's address.
+    /// * `token`            – The token contract address used for contributions.
+    /// * `goal`             – The funding goal (in the token's smallest unit).
+    /// * `deadline`         – The campaign deadline as a ledger timestamp.
+    /// * `min_contribution` – The minimum contribution amount.
+    /// * `category`         – Primary campaign category (e.g. Technology, Art).
+    /// * `tags`             – Optional descriptive tags for the campaign.
     pub fn initialize(
         env: Env,
         admin: Address,
@@ -336,6 +350,9 @@ impl CrowdfundContract {
                 bonus_goal_description,
             },
         )
+        category: soroban_sdk::String,
+        tags: Vec<soroban_sdk::String>,
+    ) {
         // Prevent re-initialization.
         if env.storage().instance().has(&DataKey::Creator) {
             return Err(ContractError::AlreadyInitialized);
@@ -350,6 +367,9 @@ impl CrowdfundContract {
             }
             None => core::cmp::min(env.ledger().timestamp() + 86400, deadline.saturating_sub(1)),
         };
+        if category.len() == 0 {
+            panic!("category must not be empty");
+        }
 
         creator.require_auth();
 
@@ -384,6 +404,9 @@ impl CrowdfundContract {
             .set(&DataKey::MinContribution, &min_contribution);
         env.storage().instance().set(&DataKey::Title, &title);
         env.storage().instance().set(&DataKey::Description, &description);
+        env.storage().instance().set(&DataKey::MinContribution, &min_contribution);
+        env.storage().instance().set(&DataKey::Category, &category);
+        env.storage().instance().set(&DataKey::Tags, &tags);
         env.storage().instance().set(&DataKey::TotalRaised, &0i128);
         env.storage()
             .instance()
@@ -1644,6 +1667,16 @@ impl CrowdfundContract {
         env.storage()
             .instance()
             .get(&DataKey::MaxIndividualContribution)
+    }
+
+    /// Returns the primary campaign category.
+    pub fn category(env: Env) -> soroban_sdk::String {
+        env.storage().instance().get(&DataKey::Category).unwrap()
+    }
+
+    /// Returns the optional descriptive tags.
+    pub fn tags(env: Env) -> Vec<soroban_sdk::String> {
+        env.storage().instance().get(&DataKey::Tags).unwrap_or(Vec::new(&env))
     }
 
     /// Returns comprehensive campaign statistics.
