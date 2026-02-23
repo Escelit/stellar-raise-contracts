@@ -20,6 +20,50 @@ Stellar Raise lets anyone create a crowdfunding campaign on-chain. Contributors 
 | **Withdraw**   | Creator claims funds after a successful campaign   |
 | **Refund**     | Contributors reclaim tokens if the goal is missed  |
 
+## Architecture
+
+The following diagram shows the high-level relationship between the frontend, Soroban smart contracts, and the Stellar network:
+
+```mermaid
+graph TD
+    A[User Browser] -->|HTTP / HTTPS| B[Frontend<br/>Next.js / React]
+
+    B -->|Soroban SDK calls| C[Soroban RPC Node]
+    B -->|Horizon API calls| D[Horizon API Server]
+
+    C -->|Deploy / Invoke| E[Soroban Smart Contracts<br/>Crowdfund Contract<br/>Factory Contract]
+    D -->|Account / Transaction data| B
+
+    E -->|Read / Write state| F[Stellar Ledger]
+    C -->|Submit transactions| F
+
+    F -->|Ledger events| G[Off-chain Indexer<br/>Optional]
+    G -->|Indexed campaign data| B
+
+    subgraph network["Stellar Network"]
+        C
+        D
+        F
+    end
+
+    subgraph contracts["Smart Contracts Layer"]
+        E
+    end
+
+    subgraph services["Off-chain Services"]
+        G
+    end
+```
+
+### Layer Summary
+
+| Layer                 | Technology            | Responsibility                           |
+| :-------------------- | :-------------------- | :--------------------------------------- |
+| **Frontend**          | Next.js / React       | User interface and wallet interaction    |
+| **Smart Contracts**   | Soroban / Rust        | Campaign logic, fund management          |
+| **Stellar Network**   | Soroban RPC + Horizon | Transaction processing and ledger state  |
+| **Off-chain Indexer** | Optional              | Event indexing for faster data retrieval |
+
 ## Project Structure
 
 ```text
