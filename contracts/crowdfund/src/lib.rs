@@ -2653,6 +2653,8 @@ impl CrowdfundContract {
         }
 
         // Get all contributors to find potential referrers
+    /// Returns the number of unique contributors.
+    pub fn contributor_count(env: Env) -> u32 {
         let contributors: Vec<Address> = env
             .storage()
             .persistent()
@@ -2824,5 +2826,6 @@ impl CrowdfundContract {
         let goal: i128 = env.storage().instance().get(&DataKey::Goal).unwrap();
         let total_raised: i128 = env.storage().instance().get(&DataKey::TotalRaised).unwrap_or(0);
         if goal > total_raised { goal - total_raised } else { 0 }
+        contributors.len()
     }
 }
