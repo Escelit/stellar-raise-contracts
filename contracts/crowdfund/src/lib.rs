@@ -297,6 +297,8 @@ pub enum DataKey {
     WhitelistEnabled,
     /// Individual whitelist entry by address.
     Whitelist(Address),
+    /// Total amount referred by each referrer address.
+    ReferralTally(Address),
 }
 
 // ── Rate Limiting ──────────────────────────────────────────────────────────
@@ -383,6 +385,7 @@ pub struct CampaignInfo {
     pub min_contribution: i128,
     pub status: Status,
     pub verified: bool,
+    InvalidLimit = 11,
 }
 
 /// Interface for an external NFT contract used to mint contributor rewards.
@@ -726,6 +729,8 @@ impl CrowdfundContract {
     /// The contributor must authorize the call. Contributions are rejected
     /// after the deadline has passed or if the campaign is not active.
     pub fn contribute(env: Env, contributor: Address, amount: i128) -> Result<(), ContractError> {
+    /// after the deadline has passed.
+    pub fn contribute(env: Env, contributor: Address, amount: i128, referral: Option<Address>) -> Result<(), ContractError> {
         // ── Rate limiting: enforce cooldown between contributions ──
         let now = env.ledger().timestamp();
         let last_time_key = DataKey::LastContributionTime(contributor.clone());
@@ -1033,6 +1038,34 @@ impl CrowdfundContract {
             (contributor, effective_amount),
         );
             .publish(("campaign", "contributed"), (contributor, effective_amount));
+            .publish(("campaign", "contributed"), (contributor.clone(), effective_amount));
+
+        // Update referral tally if referral provided
+        if let Some(referrer) = referral {
+            if referrer != contributor {
+                let referral_key = DataKey::ReferralTally(referrer.clone());
+                let current_tally: i128 = env
+                    .storage()
+                    .persistent()
+                    .get(&referral_key)
+                    .unwrap_or(0);
+                
+                let new_tally = current_tally
+                    .checked_add(effective_amount)
+                    .ok_or(ContractError::Overflow)?;
+                
+                env.storage()
+                    .persistent()
+                    .set(&referral_key, &new_tally);
+                env.storage()
+                    .persistent()
+                    .extend_ttl(&referral_key, 100, 100);
+
+                // Emit referral event
+                env.events()
+                    .publish(("campaign", "referral"), (referrer, contributor, effective_amount));
+            }
+        }
 
         // Update last contribution time for rate limiting
         env.storage().persistent().set(&last_time_key, &now);
@@ -2604,6 +2637,36 @@ impl CrowdfundContract {
                     );
 
                     processed_count += 1;
+    /// Returns the top referrers sorted by total amount referred (descending).
+    ///
+    /// # Arguments
+    /// * `limit` - Maximum number of referrers to return (must be > 0)
+    ///
+    /// # Returns
+    /// Vec of (Address, i128) tuples sorted by amount descending
+    ///
+    /// # Errors
+    /// * ContractError::InvalidLimit - if limit is 0
+    pub fn top_referrers(env: Env, limit: u32) -> Result<Vec<(Address, i128)>, ContractError> {
+        if limit == 0 {
+            return Err(ContractError::InvalidLimit);
+        }
+
+        // Get all contributors to find potential referrers
+        let contributors: Vec<Address> = env
+            .storage()
+            .persistent()
+            .get(&DataKey::Contributors)
+            .unwrap_or_else(|| Vec::new(&env));
+
+        let mut referrers: Vec<(Address, i128)> = Vec::new(&env);
+
+        // Check each contributor's referral tally
+        for contributor in contributors.iter() {
+            let referral_key = DataKey::ReferralTally(contributor.clone());
+            if let Some(tally) = env.storage().persistent().get::<_, i128>(&referral_key) {
+                if tally > 0 {
+                    referrers.push_back((contributor.clone(), tally));
                 }
             }
         }
@@ -2707,5 +2770,54 @@ impl CrowdfundContract {
     pub fn is_campaign_active(env: Env) -> bool {
         let deadline: u64 = env.storage().instance().get(&DataKey::Deadline).unwrap();
         env.ledger().timestamp() <= deadline
+        // Sort by tally descending
+        // Note: Soroban doesn't have built-in sorting, so we'll use a simple approach
+        // In practice, you might want to implement a more efficient sorting algorithm
+        let mut sorted = Vec::new(&env);
+        
+        // Simple bubble sort (for demonstration - in production use more efficient sort)
+        let referrers_len = referrers.len();
+        for i in 0..referrers_len {
+            let mut max_idx = i;
+            for j in (i + 1)..referrers_len {
+                if referrers.get(j).unwrap().1 > referrers.get(max_idx).unwrap().1 {
+                    max_idx = j;
+                }
+            }
+            if max_idx != i {
+                // Swap
+                let temp = referrers.get(i).unwrap();
+                referrers.set(i, referrers.get(max_idx).unwrap());
+                referrers.set(max_idx, temp);
+            }
+        }
+
+        // Take only the requested limit
+        let result_limit = if referrers.len() < limit {
+            referrers.len() as u32
+        } else {
+            limit
+        };
+
+        for i in 0..result_limit {
+            sorted.push_back(referrers.get(i).unwrap());
+        }
+
+        Ok(sorted)
+    }
+
+    /// Returns the total amount referred by a specific address.
+    ///
+    /// # Arguments
+    /// * `referrer` - The address to check referral tally for
+    ///
+    /// # Returns
+    /// Total amount referred by the address (0 if none)
+    pub fn referral_tally(env: Env, referrer: Address) -> i128 {
+        let referral_key = DataKey::ReferralTally(referrer);
+        env.storage()
+            .persistent()
+            .get(&referral_key)
+            .unwrap_or(0)
     }
 }
