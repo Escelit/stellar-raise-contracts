@@ -9,6 +9,8 @@ use soroban_sdk::{
 // ── Modules ──────────────────────────────────────────────────────────────────
 use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, token, Address, Env, String, Symbol, Vec,
+    contract, contractclient, contracterror, contractimpl, contracttype, token, Address, Env,
+    String, Symbol, Vec,
 };
 
 pub mod access_control;
@@ -105,6 +107,17 @@ pub enum Status {
 }
 
 /// Represents a single roadmap milestone with a date and description.
+const CONTRACT_VERSION: u32 = 3;
+
+#[derive(Clone, PartialEq)]
+#[contracttype]
+pub enum Status {
+    Active,
+    Successful,
+    Refunded,
+    Cancelled,
+}
+
 #[derive(Clone)]
 #[contracttype]
 pub struct RoadmapItem {
@@ -160,7 +173,6 @@ pub struct CampaignStats {
     pub largest_contribution: i128,
 }
 
-/// Represents all storage keys used by the crowdfund contract.
 #[derive(Clone)]
 #[contracttype]
 pub struct CampaignInfo {
@@ -169,8 +181,6 @@ pub struct CampaignInfo {
     pub goal: i128,
     pub deadline: u64,
     pub total_raised: i128,
-    pub title: String,
-    pub description: String,
 }
 
 #[derive(Clone)]
@@ -190,15 +200,6 @@ pub struct FeeTier {
 #[derive(Clone)]
 #[contracttype]
 pub enum DataKey {
-    /// Whether the campaign is paused.
-    Paused,
-    /// The hard cap for the campaign.
-    HardCap,
-    /// The campaign category.
-    Category,
-    /// The campaign tags.
-    Tags,
-    /// The address of the campaign creator.
     Creator,
     /// The token contract address used for contributions.
     Token,
@@ -209,12 +210,14 @@ pub enum DataKey {
     /// The running total of tokens raised.
     TotalRaised,
     /// Individual contribution amount keyed by contributor address.
+    Token,
+    Goal,
+    Deadline,
+    TotalRaised,
     Contribution(Address),
-    /// List of all contributor addresses.
     Contributors,
     /// Current campaign status.
     Status,
-    /// Minimum contribution amount.
     MinContribution,
     Pledge(Address),
     /// Total amount pledged but not yet collected.
@@ -242,13 +245,8 @@ pub enum DataKey {
     Roadmap,
     /// The designated admin address (set to creator at initialization).
     Admin,
-    /// Campaign title.
     Title,
-    /// Last contribution timestamp per address (for rate limiting).
-    LastContributionTime(Address),
-    /// Campaign description.
     Description,
-    /// Campaign social links.
     SocialLinks,
     /// Platform fee configuration.
     PlatformConfig,
@@ -316,6 +314,9 @@ const CONTRIBUTION_COOLDOWN: u64 = 0;
 use soroban_sdk::contracterror;
 
 /// Errors that can be returned by the crowdfund contract.
+    NFTContract,
+}
+
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 #[repr(u32)]
@@ -402,6 +403,11 @@ pub trait NftContract {
 }
 
 /// The main crowdfunding contract.
+#[contractclient(name = "NftContractClient")]
+pub trait NftContract {
+    fn mint(env: Env, to: Address) -> u128;
+}
+
 #[contract]
 pub struct CrowdfundContract;
 
@@ -588,11 +594,13 @@ impl CrowdfundContract {
 
         creator.require_auth();
 
-        // Validate platform fee if provided.
         if let Some(ref config) = platform_config {
             if config.fee_bps > 10_000 {
                 panic!("platform fee cannot exceed 100%");
             }
+            env.storage()
+                .instance()
+                .set(&DataKey::PlatformConfig, config);
         }
         if hard_cap < goal {
             return Err(ContractError::InvalidHardCap);
@@ -695,11 +703,6 @@ impl CrowdfundContract {
             .instance()
             .set(&DataKey::Roadmap, &empty_roadmap);
 
-        let empty_reward_tiers: Vec<RewardTier> = Vec::new(&env);
-        env.storage()
-            .instance()
-            .set(&DataKey::RewardTiers, &empty_reward_tiers);
-
         Ok(())
     }
 
@@ -716,7 +719,20 @@ impl CrowdfundContract {
     pub fn add_to_whitelist(env: Env, addresses: Vec<Address>) {
         if addresses.is_empty() {
             panic!("addresses list must not be empty");
+    pub fn set_nft_contract(env: Env, creator: Address, nft_contract: Address) {
+        let stored_creator: Address = env.storage().instance().get(&DataKey::Creator).unwrap();
+        if creator != stored_creator {
+            panic!("not authorized");
         }
+
+        creator.require_auth();
+        env.storage()
+            .instance()
+            .set(&DataKey::NFTContract, &nft_contract);
+    }
+
+    pub fn contribute(env: Env, contributor: Address, amount: i128) -> Result<(), ContractError> {
+        contributor.require_auth();
 
         let status: Status = env.storage().instance().get(&DataKey::Status).unwrap();
         if status != Status::Active {
@@ -948,41 +964,26 @@ impl CrowdfundContract {
 
         let token_address: Address = env.storage().instance().get(&DataKey::Token).unwrap();
         let token_client = token::Client::new(&env, &token_address);
+        token_client.transfer(&contributor, &env.current_contract_address(), &amount);
 
-        // Transfer tokens from the contributor to this contract.
-        token_client.transfer(
-            &contributor,
-            &env.current_contract_address(),
-            &effective_amount,
-        );
-
-        // Update the contributor's running total with overflow protection.
         let contribution_key = DataKey::Contribution(contributor.clone());
-        let prev: i128 = env
+        let previous_amount: i128 = env
             .storage()
             .persistent()
             .get(&contribution_key)
             .unwrap_or(0);
 
-        let new_contribution = prev
-            .checked_add(effective_amount)
-            .ok_or(ContractError::Overflow)?;
-
         env.storage()
             .persistent()
-            .set(&contribution_key, &new_contribution);
+            .set(&contribution_key, &(previous_amount + amount));
         env.storage()
             .persistent()
             .extend_ttl(&contribution_key, 100, 100);
 
-        // Update the global total raised with overflow protection.
-        let new_total = total
-            .checked_add(effective_amount)
-            .ok_or(ContractError::Overflow)?;
-
+        let total: i128 = env.storage().instance().get(&DataKey::TotalRaised).unwrap();
         env.storage()
             .instance()
-            .set(&DataKey::TotalRaised, &new_total);
+            .set(&DataKey::TotalRaised, &(total + amount));
 
         if new_total == hard_cap {
             env.events()
@@ -1006,9 +1007,10 @@ impl CrowdfundContract {
             .storage()
             .persistent()
             .get(&DataKey::Contributors)
-            .unwrap();
+            .unwrap_or_else(|| Vec::new(&env));
+
         if !contributors.contains(&contributor) {
-            contributors.push_back(contributor.clone());
+            contributors.push_back(contributor);
             env.storage()
                 .persistent()
                 .set(&DataKey::Contributors, &contributors);
@@ -1370,16 +1372,10 @@ impl CrowdfundContract {
     /// For high-value campaigns, using a multisig or DAO as the creator significantly
     /// reduces the risk of unauthorized fund withdrawal, as multiple parties must
     /// approve the transaction.
-    pub fn withdraw(env: Env) -> Result<(), ContractError> {
-        let paused: bool = env
-            .storage()
-            .instance()
-            .get(&DataKey::Paused)
-            .unwrap_or(false);
-        if paused {
-            return Err(ContractError::ContractPaused);
-        }
+        Ok(())
+    }
 
+    pub fn withdraw(env: Env) -> Result<(), ContractError> {
         let status: Status = env.storage().instance().get(&DataKey::Status).unwrap();
         if status != Status::Succeeded {
             panic!("campaign must be in Succeeded state to withdraw");
@@ -1479,7 +1475,6 @@ impl CrowdfundContract {
             env.storage().instance().get(&DataKey::PlatformConfig);
 
         let creator_payout = if let Some(config) = platform_config {
-            // Calculate fee using checked arithmetic to prevent overflow.
             let fee = total
                 .checked_mul(config.fee_bps as i128)
                 .expect("fee calculation overflow")
@@ -1497,21 +1492,15 @@ impl CrowdfundContract {
                 total * config.fee_bps as i128 / 10_000
             };
 
-            // Transfer fee to platform.
             token_client.transfer(&env.current_contract_address(), &config.address, &fee);
-
-            // Emit event with fee details.
             env.events()
                 .publish(("campaign", "fee_transferred"), (&config.address, fee));
-
-            // Calculate creator payout.
             total.checked_sub(fee).expect("creator payout underflow")
             total - fee
         } else {
             total
         };
 
-        // Transfer remainder to creator.
         token_client.transfer(&env.current_contract_address(), &creator, &creator_payout);
 
         env.storage().instance().set(&DataKey::TotalRaised, &0i128);
@@ -1519,51 +1508,47 @@ impl CrowdfundContract {
             .instance()
             .set(&DataKey::Status, &Status::Successful);
 
-        // Emit withdrawal event
+        // Mint one commemorative NFT per eligible contributor after successful payout.
+        if let Some(nft_contract) = env
+            .storage()
+            .instance()
+            .get::<_, Address>(&DataKey::NFTContract)
+        {
+            let nft_client = NftContractClient::new(&env, &nft_contract);
+            let contributors: Vec<Address> = env
+                .storage()
+                .persistent()
+                .get(&DataKey::Contributors)
+                .unwrap_or_else(|| Vec::new(&env));
+
+            for contributor in contributors.iter() {
+                let amount: i128 = env
+                    .storage()
+                    .persistent()
+                    .get(&DataKey::Contribution(contributor.clone()))
+                    .unwrap_or(0);
+
+                // Only mint for contributors with a non-zero stake.
+                if amount > 0 {
+                    let token_id = nft_client.mint(&contributor);
+                    env.events().publish(
+                        (
+                            Symbol::new(&env, "campaign"),
+                            Symbol::new(&env, "nft_minted"),
+                        ),
+                        (contributor, token_id),
+                    );
+                }
+            }
+        }
+
         env.events()
             .publish(("campaign", "withdrawn"), (creator.clone(), total));
 
         Ok(())
     }
 
-    /// Refund a single contributor — pull-based model.
-    ///
-    /// This function implements a **pull-based** refund pattern where each
-    /// contributor must individually claim their refund. This is more scalable
-    /// than the previous push-based batch refund as it avoids hitting resource
-    /// limits when there are thousands of backers.
-    ///
-    /// # Pull-based Refund Model
-    ///
-    /// Instead of iterating over all contributors in a single transaction
-    /// (which would fail with thousands of backers due to resource limits),
-    /// each contributor must claim their own refund individually by calling
-    /// this function with their address.
-    ///
-    /// # Arguments
-    /// * `contributor` – The address of the contributor requesting a refund.
-    ///
-    /// # Requirements
-    /// * The campaign status must be Active.
-    /// * The deadline must have passed.
-    /// * The funding goal must not have been reached.
-    /// * The contributor must have an existing contribution.
-    ///
-    /// # Returns
-    /// Ok(()) if successful, or an error if the campaign is not eligible for
-    /// refunds.
-    ///
-    /// # Example
-    /// ```bash
-    /// stellar contract invoke \
-    ///   --id <CONTRACT_ID> \
-    ///   --network testnet \
-    ///   --source <YOUR_SECRET_KEY> \
-    ///   -- refund_single \
-    ///   --contributor <YOUR_ADDRESS>
-    /// ```
     pub fn refund_single(env: Env, contributor: Address) -> Result<(), ContractError> {
-        // Require contributor authorization.
         contributor.require_auth();
 
         // Check campaign status is Active.
@@ -1613,20 +1598,17 @@ impl CrowdfundContract {
             panic!("campaign is not active");
         }
 
-        // Check deadline has passed.
         let deadline: u64 = env.storage().instance().get(&DataKey::Deadline).unwrap();
         if env.ledger().timestamp() <= deadline {
             return Err(ContractError::CampaignStillActive);
         }
 
-        // Check goal was not reached.
         let goal: i128 = env.storage().instance().get(&DataKey::Goal).unwrap();
         let total: i128 = env.storage().instance().get(&DataKey::TotalRaised).unwrap();
         if total >= goal {
             return Err(ContractError::GoalReached);
         }
 
-        // Get the contributor's contribution amount.
         let contribution_key = DataKey::Contribution(contributor.clone());
         let amount: i128 = env
             .storage()
@@ -1634,7 +1616,6 @@ impl CrowdfundContract {
             .get(&DataKey::Contributors)
             .unwrap_or_else(|| Vec::new(&env));
 
-        // Skip if no contribution to refund.
         if amount == 0 {
             return Ok(());
         for contributor in contributors.iter() {
@@ -1684,6 +1665,15 @@ impl CrowdfundContract {
         // Emit refund event
         env.events()
             .publish(("campaign", "refunded"), (contributor.clone(), amount));
+        env.storage()
+            .instance()
+            .set(&DataKey::TotalRaised, &(total - amount));
+
+        if total - amount == 0 {
+            env.storage()
+                .instance()
+                .set(&DataKey::Status, &Status::Refunded);
+        }
 
         Ok(())
     }
@@ -2388,7 +2378,10 @@ impl CrowdfundContract {
         env.storage().instance().get(&DataKey::Creator).unwrap()
     }
 
-    /// Returns complete campaign information in a single call.
+    pub fn nft_contract(env: Env) -> Option<Address> {
+        env.storage().instance().get(&DataKey::NFTContract)
+    }
+
     pub fn get_campaign_info(env: Env) -> CampaignInfo {
         let creator: Address = env.storage().instance().get(&DataKey::Creator).unwrap();
         let token: Address = env.storage().instance().get(&DataKey::Token).unwrap();
@@ -2416,8 +2409,6 @@ impl CrowdfundContract {
             goal,
             deadline,
             total_raised,
-            title,
-            description,
         }
     }
 
@@ -2442,6 +2433,7 @@ impl CrowdfundContract {
     }
 
     /// Returns comprehensive campaign statistics.
+
     pub fn get_stats(env: Env) -> CampaignStats {
         let total_raised: i128 = env
             .storage()
@@ -2456,9 +2448,46 @@ impl CrowdfundContract {
             .unwrap_or_else(|| Vec::new(&env));
 
         build_campaign_stats(&env, total_raised, goal, &contributors)
+        let progress_bps = if goal > 0 {
+            let raw = (total_raised * 10_000) / goal;
+            if raw > 10_000 {
+                10_000
+            } else {
+                raw as u32
+            }
+        } else {
+            0
+        };
+
+        let contributor_count = contributors.len();
+        let (average_contribution, largest_contribution) = if contributor_count == 0 {
+            (0, 0)
+        } else {
+            let average = total_raised / contributor_count as i128;
+            let mut largest = 0i128;
+            for contributor in contributors.iter() {
+                let amount: i128 = env
+                    .storage()
+                    .persistent()
+                    .get(&DataKey::Contribution(contributor))
+                    .unwrap_or(0);
+                if amount > largest {
+                    largest = amount;
+                }
+            }
+            (average, largest)
+        };
+
+        CampaignStats {
+            total_raised,
+            goal,
+            progress_bps,
+            contributor_count,
+            average_contribution,
+            largest_contribution,
+        }
     }
 
-    /// Returns the campaign title.
     pub fn title(env: Env) -> String {
         env.storage()
             .instance()
@@ -2466,7 +2495,6 @@ impl CrowdfundContract {
             .unwrap_or_else(|| String::from_str(&env, ""))
     }
 
-    /// Returns the campaign description.
     pub fn description(env: Env) -> String {
         env.storage()
             .instance()
@@ -2474,7 +2502,6 @@ impl CrowdfundContract {
             .unwrap_or_else(|| String::from_str(&env, ""))
     }
 
-    /// Returns the campaign social links.
     pub fn socials(env: Env) -> String {
         env.storage()
             .instance()
