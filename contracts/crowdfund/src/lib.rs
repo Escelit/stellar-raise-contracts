@@ -331,6 +331,10 @@ pub enum DataKey {
     AutoExtensionThreshold,
     /// Number of times the deadline has been auto-extended.
     ExtensionCount,
+    /// Whether whitelist is enabled for this campaign.
+    WhitelistEnabled,
+    /// Individual whitelist status by address.
+    Whitelist(Address),
 }
 
 // ── Rate Limiting ──────────────────────────────────────────────────────────
