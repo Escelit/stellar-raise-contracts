@@ -111,6 +111,18 @@ pub enum Status {
 /// Represents a single roadmap milestone with a date and description.
 const CONTRACT_VERSION: u32 = 3;
 const CONTRIBUTION_COOLDOWN: u64 = 60; // 60 seconds cooldown
+// ── Constants ───────────────────────────────────────────────────────────────
+
+/// Number of seconds before deadline that triggers auto-extension eligibility (1 hour).
+const AUTO_EXTENSION_WINDOW: u64 = 3600;
+
+/// Number of seconds the deadline is extended by when triggered (24 hours).
+const AUTO_EXTENSION_DURATION: u64 = 86400;
+
+/// Maximum number of auto-extensions allowed to prevent infinite deadline creep.
+const MAX_AUTO_EXTENSIONS: u32 = 5;
+
+// ── Data Keys ───────────────────────────────────────────────────────────────
 
 /// Contract version constant.
 ///
@@ -320,6 +332,10 @@ pub enum DataKey {
     BonusGoalReachedEmitted,
     /// Total amount referred by each referrer address.
     ReferralTally(Address),
+    /// Minimum contribution amount required to trigger auto-extension.
+    AutoExtensionThreshold,
+    /// Number of times the deadline has been auto-extended.
+    ExtensionCount,
 }
 
 // ── Rate Limiting ──────────────────────────────────────────────────────────
@@ -498,6 +514,12 @@ impl CrowdfundContract {
     #[allow(clippy::too_many_arguments)]
     /// * `platform_config`  – Optional platform configuration (address and fee in basis points).
     /// * `fee_tiers`        – Optional fee tiers for dynamic fee calculation.
+    /// * `creator`                   – The campaign creator's address.
+    /// * `token`                     – The token contract address used for contributions.
+    /// * `goal`                      – The funding goal (in the token's smallest unit).
+    /// * `deadline`                  – The campaign deadline as a ledger timestamp.
+    /// * `min_contribution`          – The minimum contribution amount.
+    /// * `auto_extension_threshold`  – Optional minimum contribution to trigger auto-extension.
     pub fn initialize(
         env: Env,
         admin: Address,
@@ -533,6 +555,7 @@ impl CrowdfundContract {
         tags: Vec<soroban_sdk::String>,
         platform_config: Option<PlatformConfig>,
         fee_tiers: Option<Vec<FeeTier>>,
+        auto_extension_threshold: Option<i128>,
     ) {
         // Prevent re-initialization.
         if env.storage().instance().has(&DataKey::Creator) {
@@ -671,6 +694,12 @@ impl CrowdfundContract {
         // Store platform config if provided.
         if let Some(config) = platform_config {
             env.storage().instance().set(&DataKey::PlatformConfig, &config);
+        env.storage().instance().set(&DataKey::Status, &Status::Active);
+        env.storage().instance().set(&DataKey::ExtensionCount, &0u32);
+
+        // Store auto-extension threshold if provided.
+        if let Some(threshold) = auto_extension_threshold {
+            env.storage().instance().set(&DataKey::AutoExtensionThreshold, &threshold);
         }
 
         let empty_contributors: Vec<Address> = Vec::new(&env);
@@ -1395,6 +1424,43 @@ impl CrowdfundContract {
         env.storage()
             .instance()
             .set(&DataKey::TotalRaised, &(total - amount));
+            .set(&DataKey::TotalRaised, &(total + amount));
+
+        // Track contributor address if new.
+        let mut contributors: Vec<Address> = env
+            .storage()
+            .instance()
+            .get(&DataKey::Contributors)
+            .unwrap();
+        if !contributors.contains(&contributor) {
+            contributors.push_back(contributor.clone());
+            env.storage()
+                .instance()
+                .set(&DataKey::Contributors, &contributors);
+        }
+
+        // Check for auto-extension eligibility.
+        let auto_extension_threshold: Option<i128> = env.storage().instance().get(&DataKey::AutoExtensionThreshold);
+        if let Some(threshold) = auto_extension_threshold {
+            let current_time = env.ledger().timestamp();
+            let extension_count: u32 = env.storage().instance().get(&DataKey::ExtensionCount).unwrap_or(0);
+
+            // Check if within extension window, amount meets threshold, and under extension cap.
+            if current_time >= deadline - AUTO_EXTENSION_WINDOW
+                && amount >= threshold
+                && extension_count < MAX_AUTO_EXTENSIONS
+            {
+                let new_deadline = deadline + AUTO_EXTENSION_DURATION;
+                env.storage().instance().set(&DataKey::Deadline, &new_deadline);
+                env.storage().instance().set(&DataKey::ExtensionCount, &(extension_count + 1));
+
+                // Emit deadline_extended event.
+                env.events().publish(
+                    ("campaign", "deadline_extended"),
+                    (deadline, new_deadline, contributor, amount),
+                );
+            }
+        }
     }
 
     /// Returns the current stored campaign status.
