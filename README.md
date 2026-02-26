@@ -268,6 +268,11 @@ soroban contract invoke \
   --min_contribution <MIN>
 ```
 
+
+## Code of Conduct
+
+Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before contributing.
+
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for a full history of notable changes.

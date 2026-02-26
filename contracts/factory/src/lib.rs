@@ -48,6 +48,9 @@ impl FactoryContract {
             .deploy_v2(wasm_hash, ());
 
         // Initialize the deployed contract.
+        // Keep factory API stable: use default min contribution and no platform config.
+        let min_contribution: i128 = 1_000;
+        let no_platform_config: Option<soroban_sdk::Val> = None;
         let _: () = env.invoke_contract(
             &deployed_address,
             &Symbol::new(&env, "initialize"),

@@ -1,0 +1,10 @@
+{
+  "name": "stellar-raise-contracts",
+  "private": true,
+  "scripts": {
+    "optimize:svg": "svgo --folder frontend/public/images/ --recursive --multipass --config svgo.config.js"
+  },
+  "devDependencies": {
+    "svgo": "^3.3.2"
+  }
+}

@@ -1,0 +1,36 @@
+/* =============================================
+   Text Truncation Utilities
+   ============================================= */
+
+/* Single-line ellipsis truncation */
+.truncate {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Multi-line truncation (2 lines) */
+.truncate-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Multi-line truncation (3 lines) */
+.truncate-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Address truncation — fixed width for crypto addresses */
+.truncate-address {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  max-width: 160px;
+  font-family: monospace;
+  font-size: 0.875rem;
+}

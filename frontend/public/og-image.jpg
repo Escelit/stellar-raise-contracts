@@ -1,0 +1,65 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e1b4b;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#312e81;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4f46e5;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#c7d2fe;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bgGrad)"/>
+  
+  <!-- Decorative elements -->
+  <circle cx="100" cy="100" r="80" fill="#818cf8" opacity="0.1"/>
+  <circle cx="1100" cy="530" r="60" fill="#c7d2fe" opacity="0.1"/>
+  <circle cx="1050" cy="150" r="40" fill="#a5b4fc" opacity="0.15"/>
+  <circle cx="150" cy="480" r="50" fill="#818cf8" opacity="0.1"/>
+  
+  <!-- Stellar network pattern -->
+  <g opacity="0.2">
+    <line x1="100" y1="200" x2="300" y2="150" stroke="#818cf8" stroke-width="2"/>
+    <line x1="300" y1="150" x2="500" y2="200" stroke="#818cf8" stroke-width="2"/>
+    <line x1="500" y1="200" x2="700" y2="150" stroke="#818cf8" stroke-width="2"/>
+    <line x1="700" y1="150" x2="900" y2="200" stroke="#818cf8" stroke-width="2"/>
+    <line x1="900" y1="200" x2="1100" y2="150" stroke="#818cf8" stroke-width="2"/>
+    
+    <line x1="200" y1="400" x2="400" y2="450" stroke="#c7d2fe" stroke-width="2"/>
+    <line x1="400" y1="450" x2="600" y2="400" stroke="#c7d2fe" stroke-width="2"/>
+    <line x1="600" y1="400" x2="800" y2="450" stroke="#c7d2fe" stroke-width="2"/>
+    <line x1="800" y1="450" x2="1000" y2="400" stroke="#c7d2fe" stroke-width="2"/>
+  </g>
+  
+  <!-- Main content -->
+  <g text-anchor="middle">
+    <!-- Star icon -->
+    <path d="M600 180 L620 240 L680 240 L630 280 L650 340 L600 300 L550 340 L570 280 L520 240 L580 240 Z" fill="url(#accentGrad)"/>
+    
+    <!-- Main title -->
+    <text x="600" y="280" font-family="Arial, sans-serif" font-size="80" font-weight="bold" fill="#ffffff">
+      ⭐ CrowdFund
+    </text>
+    
+    <!-- Tagline -->
+    <text x="600" y="360" font-family="Arial, sans-serif" font-size="32" fill="#c7d2fe">
+      Decentralized Crowdfunding on Stellar
+    </text>
+    
+    <!-- Subtitle -->
+    <text x="600" y="450" font-family="Arial, sans-serif" font-size="24" fill="#a5b4fc">
+      Built with Soroban Smart Contracts
+    </text>
+  </g>
+  
+  <!-- Bottom accent bar -->
+  <rect x="0" y="580" width="1200" height="50" fill="url(#accentGrad)" opacity="0.3"/>
+  
+  <!-- URL placeholder -->
+  <text x="600" y="610" font-family="monospace" font-size="16" fill="#e0e7ff" text-anchor="middle" opacity="0.8">
+    crowdfund.stellar.org
+  </text>
+</svg>

@@ -1,5 +1,3 @@
-#![cfg(test)]
-
 use crate::{FactoryContract, FactoryContractClient};
 use soroban_sdk::{testutils::Address as _, token, Address, Env};
 
@@ -95,7 +93,6 @@ fn test_empty_registry() {
     let factory_id = env.register(FactoryContract, ());
     let factory = FactoryContractClient::new(&env, &factory_id);
 
-    // Verify empty state.
     let campaigns = factory.campaigns();
     assert_eq!(campaigns.len(), 0);
     assert_eq!(factory.campaign_count(), 0);

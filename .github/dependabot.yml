@@ -1,0 +1,85 @@
+version: 2
+updates:
+  # Rust / Cargo (Root)
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "miss-yusrah"
+    assignees:
+      - "miss-yusrah"
+    labels:
+      - "dependencies"
+      - "rust"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    ignore:
+      # Pin major versions manually to avoid breaking changes
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  # Cargo for factory contract
+  - package-ecosystem: "cargo"
+    directory: "/contracts/factory"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "miss-yusrah"
+    assignees:
+      - "miss-yusrah"
+    labels:
+      - "dependencies"
+      - "smart-contract"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+
+  # Cargo for crowdfund contract
+  - package-ecosystem: "cargo"
+    directory: "/contracts/crowdfund"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "miss-yusrah"
+    assignees:
+      - "miss-yusrah"
+    labels:
+      - "dependencies"
+      - "smart-contract"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "miss-yusrah"
+    assignees:
+      - "miss-yusrah"
+    labels:
+      - "dependencies"
+      - "ci"
+    commit-message:
+      prefix: "ci"
+      include: "scope"

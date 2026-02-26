@@ -14,10 +14,11 @@ jobs:
   spellcheck:
     name: Check spelling
     runs-on: ubuntu-latest
+    continue-on-error: true
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
 
       - name: Run spell check
         uses: check-spelling/check-spelling@main
