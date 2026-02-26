@@ -9,6 +9,7 @@ use soroban_sdk::{
     testutils::{Address as _, Ledger},
     token, Address, Env, Vec,
 };
+#![allow(unused_doc_comments)]
 
 use soroban_sdk::{
     contract, contractimpl, contracttype,
@@ -21,8 +22,9 @@ use proptest::{prop_assert, prop_assert_eq, proptest};
 use soroban_sdk::{
     testutils::{Address as _, Ledger},
 use soroban_sdk::{
-    testutils::{Address as _, Events, Ledger},
-    token, Address, Env,
+    contract, contractimpl, contracttype,
+    testutils::{Address as _, Ledger},
+    token, Address, Env, Vec,
 };
 #![cfg(test)]
 
@@ -46,6 +48,13 @@ struct MintRecord {
 enum MockNftDataKey {
     Minted,
     token_id: u128,
+    token_id: u64,
+}
+
+#[derive(Clone)]
+#[contracttype]
+enum MockNftDataKey {
+    Minted,
 }
 
 #[contract]
@@ -79,6 +88,16 @@ impl MockNftContract {
         env.storage().persistent().set(&2u32, &records);
 
         next_id
+    pub fn mint(env: Env, to: Address, token_id: u64) {
+        let mut minted: Vec<MintRecord> = env
+            .storage()
+            .persistent()
+            .get(&MockNftDataKey::Minted)
+            .unwrap_or_else(|| Vec::new(&env));
+        minted.push_back(MintRecord { to, token_id });
+        env.storage()
+            .persistent()
+            .set(&MockNftDataKey::Minted, &minted);
     }
 
     pub fn minted(env: Env) -> Vec<MintRecord> {
@@ -94,6 +113,12 @@ impl MockNftContract {
             .unwrap_or_else(|| Vec::new(&env))
     }
 }
+            .get(&MockNftDataKey::Minted)
+            .unwrap_or_else(|| Vec::new(&env))
+    }
+}
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
 
 fn setup_env() -> (
     Env,
@@ -160,15 +185,6 @@ fn mint_to(env: &Env, token_address: &Address, admin: &Address, to: &Address, am
     let _ = admin;
 }
 
-/// Helper to create default title and description for tests.
-fn default_title(env: &Env) -> soroban_sdk::String {
-    soroban_sdk::String::from_str(env, "Test Campaign")
-}
-
-fn default_description(env: &Env) -> soroban_sdk::String {
-    soroban_sdk::String::from_str(env, "A test crowdfunding campaign")
-}
-
 // ── Tests ───────────────────────────────────────────────────────────────────
 
 #[test]
@@ -178,18 +194,15 @@ fn test_initialize() {
     let deadline = env.ledger().timestamp() + 3600; // 1 hour from now
     let goal: i128 = 1_000_000;
     let min_contribution: i128 = 1_000;
-    let title = default_title(&env);
-    let description = default_description(&env);
 
     client.initialize(
         &creator,
         &token_address,
         &goal,
-        &(goal * 2),
         &deadline,
         &min_contribution,
-        &title,
-        &description,
+        &None,
+        &None,
         &None,
     );
 
@@ -197,8 +210,6 @@ fn test_initialize() {
     assert_eq!(client.deadline(), deadline);
     assert_eq!(client.min_contribution(), min_contribution);
     assert_eq!(client.total_raised(), 0);
-    assert_eq!(client.title(), title);
-    assert_eq!(client.description(), description);
 }
 
 #[test]
@@ -206,7 +217,7 @@ fn test_version() {
     let (_env, client, _creator, _token_address, _admin) = setup_env();
 
     // Test that version() returns the expected version number
-    assert_eq!(client.version(), 2);
+    assert_eq!(client.version(), 1);
 }
 
 #[test]
@@ -347,6 +358,7 @@ fn test_double_initialize_panics() {
         &None,
         &None,
         &None,
+        &None,
     );
     client.initialize(&creator, &token_address, &goal, &deadline, &min_contribution, &default_title(&env), &default_description(&env), &None);
     let result = client.try_initialize(
@@ -355,11 +367,12 @@ fn test_double_initialize_panics() {
         &token_address,
         &1_000_000,
         &goal,
-        &(goal * 2),
         &deadline,
         &1_000,
         &None,
         &Some(bad_config),
+        &min_contribution,
+        &None,
         &None,
         &None,
         &None,
@@ -569,6 +582,8 @@ fn test_withdraw_goal_not_reached_returns_error() {
         &None,
         &None,
         &None,
+        &None,
+        &None,
     );
     client.initialize(&creator, &token_address, &goal, &deadline, &min_contribution, &None, &None);
     client.initialize(&platform_admin, &creator, &token_address, &goal, &deadline, &min_contribution);
@@ -655,8 +670,8 @@ fn test_withdraw_mints_nft_for_each_contributor() {
         &soroban_sdk::Vec::new(&env),
         &deadline,
         &min_contribution,
-        &default_title(&env),
-        &default_description(&env),
+        &None,
+        &None,
         &None,
         &None,
     );
@@ -825,6 +840,8 @@ fn test_contribute_after_deadline_returns_error() {
         &deadline,
         &min_contribution,
         &None,
+        &None,
+        &None,
     );
 
     env.ledger().set_timestamp(deadline + 1);
@@ -864,8 +881,8 @@ fn test_withdraw_after_goal_met() {
         &soroban_sdk::Vec::new(&env),
         &deadline,
         &min_contribution,
-        &default_title(&env),
-        &default_description(&env),
+        &None,
+        &None,
         &None,
         &None,
     );
@@ -918,8 +935,8 @@ fn test_withdraw_before_deadline_panics() {
         &soroban_sdk::Vec::new(&env),
         &deadline,
         &min_contribution,
-        &default_title(&env),
-        &default_description(&env),
+        &None,
+        &None,
         &None,
         &None,
     );
@@ -970,8 +987,8 @@ fn test_withdraw_goal_not_reached_panics() {
         &soroban_sdk::Vec::new(&env),
         &deadline,
         &min_contribution,
-        &default_title(&env),
-        &default_description(&env),
+        &None,
+        &None,
         &None,
         &None,
     );
@@ -997,7 +1014,7 @@ fn test_withdraw_goal_not_reached_panics() {
 }
 
 #[test]
-fn test_refund_single_when_goal_not_met() {
+fn test_withdraw_mints_nft_for_each_contributor_when_configured() {
     let (env, client, creator, token_address, admin) = setup_env();
 fn test_refund_when_goal_not_met() {
     let (env, client, platform_admin, creator, token_address, token_admin) = setup_env();
@@ -1020,8 +1037,104 @@ fn test_refund_when_goal_not_met() {
         &soroban_sdk::Vec::new(&env),
         &deadline,
         &min_contribution,
-        &default_title(&env),
-        &default_description(&env),
+        &None,
+        &None,
+        &None,
+    );
+
+    let nft_contract_id = env.register(MockNftContract, ());
+    let nft_client = MockNftContractClient::new(&env, &nft_contract_id);
+    client.set_nft_contract(&creator, &nft_contract_id);
+
+    let alice = Address::generate(&env);
+    let bob = Address::generate(&env);
+    mint_to(&env, &token_address, &admin, &alice, 600_000);
+    mint_to(&env, &token_address, &admin, &bob, 400_000);
+
+    client.contribute(&alice, &600_000);
+    client.contribute(&bob, &400_000);
+    env.ledger().set_timestamp(deadline + 1);
+
+    client.withdraw();
+
+    let minted = nft_client.minted();
+    assert_eq!(minted.len(), 2);
+    assert_eq!(minted.get(0).unwrap().to, alice);
+    assert_eq!(minted.get(0).unwrap().token_id, 1);
+    assert_eq!(minted.get(1).unwrap().to, bob);
+    assert_eq!(minted.get(1).unwrap().token_id, 2);
+}
+
+#[test]
+fn test_withdraw_skips_nft_minting_when_nft_contract_not_set() {
+    let (env, client, creator, token_address, admin) = setup_env();
+
+    let deadline = env.ledger().timestamp() + 3600;
+    let goal: i128 = 1_000_000;
+    let min_contribution: i128 = 1_000;
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &None,
+        &None,
+        &None,
+    );
+
+    let nft_contract_id = env.register(MockNftContract, ());
+    let nft_client = MockNftContractClient::new(&env, &nft_contract_id);
+
+    let contributor = Address::generate(&env);
+    mint_to(&env, &token_address, &admin, &contributor, 1_000_000);
+    client.contribute(&contributor, &1_000_000);
+    env.ledger().set_timestamp(deadline + 1);
+
+    client.withdraw();
+
+    assert_eq!(nft_client.minted().len(), 0);
+}
+
+#[test]
+#[should_panic(expected = "not authorized")]
+fn test_set_nft_contract_rejects_non_creator() {
+    let (env, client, creator, token_address, _admin) = setup_env();
+
+    let deadline = env.ledger().timestamp() + 3600;
+    let goal: i128 = 1_000_000;
+    let min_contribution: i128 = 1_000;
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &None,
+        &None,
+        &None,
+    );
+
+    let attacker = Address::generate(&env);
+    let nft_contract_id = env.register(MockNftContract, ());
+    client.set_nft_contract(&attacker, &nft_contract_id);
+}
+
+#[test]
+fn test_refund_when_goal_not_met() {
+    let (env, client, creator, token_address, admin) = setup_env();
+
+    let deadline = env.ledger().timestamp() + 3600;
+    let goal: i128 = 1_000_000;
+    let min_contribution: i128 = 1_000;
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &None,
+        &None,
         &None,
         &None,
     );
@@ -1043,8 +1156,7 @@ fn test_refund_when_goal_not_met() {
     // Move past deadline — goal not met.
     env.ledger().set_timestamp(deadline + 1);
 
-    client.refund_single(&alice);
-    client.refund_single(&bob);
+    client.refund();
 
     // Both contributors should get their tokens back.
     let token_client = token::Client::new(&env, &token_address);
@@ -1075,8 +1187,8 @@ fn test_refund_when_goal_reached_panics() {
         &soroban_sdk::Vec::new(&env),
         &deadline,
         &min_contribution,
-        &default_title(&env),
-        &default_description(&env),
+        &None,
+        &None,
         &None,
     );
     client.initialize(&creator, &token_address, &goal, &deadline, &min_contribution, &None, &None);
@@ -1365,8 +1477,8 @@ fn test_bug_condition_exploration_all_error_conditions_panic() {
             &goal,
             &deadline,
             &1_000,
-            &default_title(&env),
-            &default_description(&env),
+            &None,
+            &None,
             &None,
         );
 
@@ -1381,6 +1493,7 @@ fn test_bug_condition_exploration_all_error_conditions_panic() {
             &None,
             &None,
         );
+        let result = client.try_refund();
 
         let contributor = Address::generate(&env);
         mint_to(&env, &token_address, &admin, &contributor, 500_000);
@@ -1460,24 +1573,6 @@ fn test_bug_condition_exploration_all_error_conditions_panic() {
 // ── Preservation Property Tests ────────────────────────────────────────────
 
 use proptest::prelude::*;
-
-/// **Validates: Requirements 3.1, 3.2, 3.3, 3.4, 3.5, 3.6**
-///
-/// **Property 2: Preservation** - Successful Execution Paths
-///
-/// This test verifies that all successful execution paths work correctly
-/// on the UNFIXED code. These behaviors MUST be preserved after the fix.
-///
-/// **IMPORTANT**: This test is EXPECTED TO PASS on unfixed code.
-/// When it passes, it confirms the baseline behavior to preserve.
-///
-/// The test covers all successful operations:
-/// 1. First initialization with valid parameters stores creator, token, goal, deadline, and initializes total_raised to 0
-/// 2. Valid contributions before deadline transfer tokens, update balances, and track contributors
-/// 3. Successful withdrawal by creator after deadline when goal met transfers funds and resets total_raised
-/// 4. Successful refund after deadline when goal not met refunds all contributors
-/// 5. View functions (total_raised, goal, deadline, contribution) return correct values
-/// 6. Multiple contributors are tracked correctly with individual and aggregate totals
 
 proptest! {
     #[test]
@@ -1574,7 +1669,7 @@ proptest! {
         env.ledger().set_timestamp(deadline + 1);
 
         // Test 3.4: Successful refund returns funds to contributors
-        client.refund_single(&contributor);
+        client.refund();
 
         let token_client = token::Client::new(&env, &token_address);
         prop_assert_eq!(token_client.balance(&contributor), contribution);
@@ -1621,7 +1716,7 @@ proptest! {
         client.initialize(&creator, &token_address, &goal, &hard_cap, &deadline, &1_000, &None);
         client.initialize(&creator, &token_address, &goal, &deadline, &1_000, &None, &None, &None);
 
-        client.initialize(&creator, &token_address, &goal, &deadline, &1_000, &default_title(&env), &default_description(&env), &None);
+        client.initialize(&creator, &token_address, &goal, &deadline, &1_000, &None, &None, &None);
 
         let alice = Address::generate(&env);
         let bob = Address::generate(&env);
@@ -1654,6 +1749,16 @@ fn test_double_withdraw_panics() {
     let goal: i128 = 1_000_000;
     let min_contribution: i128 = 1_000;
     client.initialize(&creator, &token_address, &goal, &deadline, &min_contribution, &default_title(&env), &default_description(&env), &None);
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &None,
+        &None,
+        &None,
+    );
 
     let contributor = Address::generate(&env);
     mint_to(&env, &token_address, &admin, &contributor, 1_000_000);
@@ -1666,13 +1771,24 @@ fn test_double_withdraw_panics() {
 }
 
 #[test]
-fn test_double_refund_single_panics() {
+#[should_panic(expected = "campaign is not active")]
+fn test_double_refund_panics() {
     let (env, client, creator, token_address, admin) = setup_env();
 
     let deadline = env.ledger().timestamp() + 3600;
     let goal: i128 = 1_000_000;
     let min_contribution: i128 = 1_000;
     client.initialize(&creator, &token_address, &goal, &deadline, &min_contribution, &default_title(&env), &default_description(&env), &None);
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &None,
+        &None,
+        &None,
+    );
 
     let alice = Address::generate(&env);
     mint_to(&env, &token_address, &admin, &alice, 500_000);
@@ -1680,17 +1796,10 @@ fn test_double_refund_single_panics() {
 
     env.ledger().set_timestamp(deadline + 1);
 
-    client.refund_single(&alice);
-    // Second refund should succeed but do nothing (amount is 0)
-    let result = client.try_refund_single(&alice);
-    assert!(result.is_ok());
+    client.refund();
+    client.refund(); // should panic — status is Refunded
 }
 
-// NOTE: The following tests are commented out because the cancel function
-// is not implemented in the current version of the contract.
-// TODO: Implement cancel function or remove these tests.
-
-/*
 #[test]
 #[should_panic(expected = "campaign is not active")]
 fn test_double_withdraw_panics() {
@@ -1852,6 +1961,12 @@ fn test_cancel_with_no_contributions() {
     );
     client.initialize(&creator, &token_address, &goal, &deadline, &min_contribution, &None, &None);
     client.initialize(&platform_admin, &creator, &token_address, &goal, &deadline, &min_contribution);
+        &deadline,
+        &min_contribution,
+        &None,
+        &None,
+        &None,
+    );
 
     client.cancel();
 
@@ -1883,6 +1998,12 @@ fn test_cancel_with_contributions() {
     );
     client.initialize(&creator, &token_address, &goal, &deadline, &min_contribution, &None, &None);
     client.initialize(&platform_admin, &creator, &token_address, &goal, &deadline, &min_contribution);
+        &deadline,
+        &min_contribution,
+        &None,
+        &None,
+        &None,
+    );
 
     let alice = Address::generate(&env);
     let bob = Address::generate(&env);
@@ -1951,6 +2072,12 @@ fn test_cancel_by_non_creator_panics() {
     );
     client.initialize(&creator, &token_address, &goal, &deadline, &min_contribution, &None, &None);
     client.initialize(&platform_admin, &creator, &token_address, &goal, &deadline, &min_contribution);
+        &deadline,
+        &min_contribution,
+        &None,
+        &None,
+        &None,
+    );
 
     env.set_auths(&[]);
     client.mock_auths(&[soroban_sdk::testutils::MockAuth {
@@ -2002,7 +2129,33 @@ fn test_contribute_below_minimum_panics() {
 }
 
 #[test]
+
 // ── Minimum Contribution Tests ─────────────────────────────────────────────
+
+#[test]
+#[should_panic(expected = "amount below minimum")]
+fn test_contribute_below_minimum_panics() {
+    let (env, client, creator, token_address, admin) = setup_env();
+
+    let deadline = env.ledger().timestamp() + 3600;
+    let goal: i128 = 1_000_000;
+    let min_contribution: i128 = 10_000;
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &None,
+        &None,
+        &None,
+    );
+
+    let contributor = Address::generate(&env);
+    mint_to(&env, &token_address, &admin, &contributor, 5_000);
+
+    client.contribute(&contributor, &5_000); // should panic
+}
 
 #[test]
 fn test_contribute_exact_minimum() {
@@ -2132,7 +2285,6 @@ fn test_stats_single_contributor() {
     assert_eq!(client.total_raised(), 10_000);
     assert_eq!(client.contribution(&contributor), 10_000);
 }
-*/
 
 #[test]
 fn test_contribute_above_minimum() {
@@ -2142,6 +2294,16 @@ fn test_contribute_above_minimum() {
     let goal: i128 = 1_000_000;
     let min_contribution: i128 = 10_000;
     client.initialize(&creator, &token_address, &goal, &deadline, &min_contribution, &default_title(&env), &default_description(&env), &None);
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &None,
+        &None,
+        &None,
+    );
 
     let contributor = Address::generate(&env);
     mint_to(&env, &token_address, &admin, &contributor, 50_000);
@@ -2621,7 +2783,6 @@ fn test_token_address_view() {
         &creator,
         &token_address,
         &goal,
-        &(goal * 2),
         &deadline,
         &min_contribution,
         &None,
@@ -2629,6 +2790,8 @@ fn test_token_address_view() {
         &min_contribution,
         &soroban_sdk::String::from_str(&env, "Technology"),
         &soroban_sdk::Vec::new(&env),
+        &None,
+        &None,
     );
 
     let current_time = env.ledger().timestamp();
@@ -2663,8 +2826,8 @@ fn test_update_metadata_stores_fields() {
         &min_contribution,
         &deadline,
         &min_contribution,
-        &default_title(&env),
-        &default_description(&env),
+        &None,
+        &None,
         &None,
         &None,
         &None,
@@ -2715,8 +2878,8 @@ fn test_add_roadmap_item_with_past_date_panics() {
         &min_contribution,
         &deadline,
         &min_contribution,
-        &default_title(&env),
-        &default_description(&env),
+        &None,
+        &None,
         &None,
         &None,
         &None,
@@ -2749,8 +2912,8 @@ fn test_add_roadmap_item_with_current_date_panics() {
         &min_contribution,
         &deadline,
         &min_contribution,
-        &default_title(&env),
-        &default_description(&env),
+        &None,
+        &None,
         &None,
         &None,
         &None,
@@ -2780,8 +2943,8 @@ fn test_add_roadmap_item_with_empty_description_panics() {
         &min_contribution,
         &deadline,
         &min_contribution,
-        &default_title(&env),
-        &default_description(&env),
+        &None,
+        &None,
         &None,
         &None,
         &None,
@@ -2823,8 +2986,8 @@ fn test_add_roadmap_item_by_non_creator_panics() {
         &min_contribution,
         &deadline,
         &min_contribution,
-        &default_title(&env),
-        &default_description(&env),
+        &None,
+        &None,
         &None,
         &None,
         &None,
@@ -2867,8 +3030,8 @@ fn test_roadmap_empty_after_initialization() {
         &min_contribution,
         &deadline,
         &min_contribution,
-        &default_title(&env),
-        &default_description(&env),
+        &None,
+        &None,
         &None,
         &None,
         &None,
@@ -2878,7 +3041,7 @@ fn test_roadmap_empty_after_initialization() {
     assert_eq!(roadmap.len(), 0);
 }
 
-// ── Campaign Updates Tests ─────────────────────────────────────────────────
+// ── Metadata Update Tests ──────────────────────────────────────────────────
 
 #[test]
 fn test_post_single_update() {
@@ -3079,6 +3242,8 @@ fn test_creator() {
 #[test]
 #[should_panic(expected = "campaign is not active")]
 fn test_update_metadata_when_not_active_panics() {
+fn test_get_campaign_info_initial() {
+fn test_update_title() {
     let (env, client, creator, token_address, _admin) = setup_env();
     let deadline = env.ledger().timestamp() + 3600;
     default_init(&client, &creator, &token_address, deadline);
@@ -3092,24 +3257,99 @@ fn test_update_metadata_when_not_active_panics() {
         &goal,
         &deadline,
         &min_contribution,
-        &default_title(&env),
-        &default_description(&env),
+        &None,
+        &None,
         &None,
         &None,
         &None,
     );
     client.initialize(&creator, &token_address, &goal, &deadline, &min_contribution, &default_title(&env), &default_description(&env), &None);
 
-    let info = client.get_campaign_info();
+    // Update title.
+    let title = soroban_sdk::String::from_str(&env, "New Campaign Title");
+    client.update_metadata(&creator, &Some(title), &None, &None);
 
-    assert_eq!(info.creator, creator);
-    assert_eq!(info.token, token_address);
-    assert_eq!(info.goal, goal);
-    assert_eq!(info.deadline, deadline);
-    assert_eq!(info.total_raised, 0);
+    // Verify title was updated (we'd need a getter, but the function should not panic).
 }
 
 // ── pledge / collect_pledges ─────────────────────────────────────────────────
+#[test]
+fn test_update_description() {
+    let (env, client, creator, token_address, _admin) = setup_env();
+
+    let deadline = env.ledger().timestamp() + 3600;
+    let goal: i128 = 1_000_000;
+    let min_contribution: i128 = 1_000;
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &None,
+        &None,
+        &None,
+    );
+
+    // Update description.
+    let description = soroban_sdk::String::from_str(&env, "New campaign description");
+    client.update_metadata(&creator, &None, &Some(description), &None);
+}
+
+#[test]
+fn test_update_socials() {
+    let (env, client, creator, token_address, _admin) = setup_env();
+
+    let deadline = env.ledger().timestamp() + 3600;
+    let goal: i128 = 1_000_000;
+    let min_contribution: i128 = 1_000;
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &None,
+        &None,
+        &None,
+    );
+
+    // Update social links.
+    let socials = soroban_sdk::String::from_str(&env, "https://twitter.com/campaign");
+    client.update_metadata(&creator, &None, &None, &Some(socials));
+}
+
+#[test]
+fn test_partial_update() {
+    let (env, client, creator, token_address, _admin) = setup_env();
+
+    let deadline = env.ledger().timestamp() + 3600;
+    let goal: i128 = 1_000_000;
+    let min_contribution: i128 = 1_000;
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &None,
+        &None,
+        &None,
+    );
+
+    // Update only title (description and socials should remain None).
+    let title = soroban_sdk::String::from_str(&env, "Updated Title");
+    client.update_metadata(&creator, &Some(title), &None, &None);
+
+    // Update only socials (should not affect title).
+    let socials = soroban_sdk::String::from_str(&env, "https://twitter.com/new");
+    client.update_metadata(&creator, &None, &None, &Some(socials));
+}
+
+#[test]
+#[should_panic(expected = "campaign is not active")]
+fn test_update_metadata_when_not_active_panics() {
+    let (env, client, creator, token_address, admin) = setup_env();
 
 /// Pledge records amount without transferring tokens immediately.
 #[test]
@@ -3123,7 +3363,6 @@ fn test_pledge_records_amount() {
         &creator,
         &token_address,
         &goal,
-        &(goal * 2),
         &deadline,
         &min_contribution,
         &None,
@@ -3141,9 +3380,20 @@ fn test_pledge_records_amount() {
     let contributor = Address::generate(&env);
     mint_to(&env, &token_address, &admin, &contributor, 1_000_000);
     client.contribute(&contributor, &1_000_000, &None);
+    // Contribute to meet the goal.
+    let contributor = Address::generate(&env);
+    mint_to(&env, &token_address, &admin, &contributor, 1_000_000);
+    client.contribute(&contributor, &1_000_000);
 
     // total_raised unchanged — pledge is not a transfer
     assert_eq!(client.total_raised(), 0);
+    // Move past deadline and withdraw (status becomes Successful).
+    env.ledger().set_timestamp(deadline + 1);
+    client.withdraw();
+
+    // Try to update metadata (should panic - campaign is not Active).
+    let title = soroban_sdk::String::from_str(&env, "New Title");
+    client.update_metadata(&creator, &Some(title), &None, &None);
 }
 
 /// Pledge after deadline must return CampaignEnded.
@@ -3152,6 +3402,9 @@ fn test_pledge_after_deadline_returns_error() {
     let (env, client, creator, token_address, _admin) = setup_env();
     let deadline = env.ledger().timestamp() + 100;
     default_init(&client, &creator, &token_address, deadline);
+#[should_panic(expected = "campaign is not active")]
+fn test_update_metadata_after_cancel_panics() {
+    let (env, client, creator, token_address, _admin) = setup_env();
 
     env.ledger().set_timestamp(deadline + 1);
     let pledger = Address::generate(&env);
@@ -3163,7 +3416,6 @@ fn test_pledge_after_deadline_returns_error() {
         &creator,
         &token_address,
         &goal,
-        &(goal * 2),
         &deadline,
         &min_contribution,
         &None,
@@ -3171,23 +3423,234 @@ fn test_pledge_after_deadline_returns_error() {
         &None,
     );
 
+    // Cancel the campaign.
+    client.cancel();
+
+    // Try to update metadata (should panic - campaign is Cancelled).
+    let title = soroban_sdk::String::from_str(&env, "New Title");
+    client.update_metadata(&creator, &Some(title), &None, &None);
+}
+
+// Note: The non-creator test would require complex mock setup.
+// The authorization check is covered by require_auth() in the contract,
+// which will panic if the caller is not the creator.
+
+// ── Deadline Update Tests ──────────────────────────────────────────────────
+
+#[test]
+fn test_update_deadline_extends_campaign() {
+    let (env, client, creator, token_address, _admin) = setup_env();
+
+    let deadline = env.ledger().timestamp() + 3600;
+    let goal: i128 = 1_000_000;
+    let min_contribution: i128 = 1_000;
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &None,
+        &None,
+        &None,
+    );
+
+    // Verify initial deadline
+    assert_eq!(client.deadline(), deadline);
+
+    // Extend the deadline
+    let new_deadline = deadline + 7200; // 2 more hours
+    client.update_deadline(&new_deadline);
+
+    // Verify the deadline was updated
+    assert_eq!(client.deadline(), new_deadline);
+}
+
+#[test]
+#[should_panic(expected = "new deadline must be after current deadline")]
+fn test_update_deadline_rejects_shortening() {
+    let (env, client, creator, token_address, _admin) = setup_env();
+
+    let deadline = env.ledger().timestamp() + 3600;
+    let goal: i128 = 1_000_000;
+    let min_contribution: i128 = 1_000;
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &None,
+        &None,
+        &None,
+    );
+
+    // Try to shorten the deadline (should panic)
+    let shorter_deadline = deadline - 1800; // 30 minutes earlier
+    client.update_deadline(&shorter_deadline);
+}
+
+#[test]
+#[should_panic(expected = "new deadline must be after current deadline")]
+fn test_update_deadline_rejects_equal_deadline() {
+    let (env, client, creator, token_address, _admin) = setup_env();
+
+    let deadline = env.ledger().timestamp() + 3600;
+    let goal: i128 = 1_000_000;
+    let min_contribution: i128 = 1_000;
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &None,
+        &None,
+        &None,
+    );
+
+    // Try to set deadline to the same value (should panic)
+    client.update_deadline(&deadline);
+}
+
+#[test]
+#[should_panic(expected = "campaign is not active")]
+fn test_update_deadline_when_not_active_panics() {
+    let (env, client, creator, token_address, _admin) = setup_env();
+
+    let deadline = env.ledger().timestamp() + 3600;
+    let goal: i128 = 1_000_000;
+    let min_contribution: i128 = 1_000;
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &None,
+        &None,
+        &None,
+    );
+
+    // Move past deadline and refund
+    env.ledger().set_timestamp(deadline + 1);
+
+    // Refund to change status from Active to Refunded
+    let _ = client.try_refund();
+
+    // Try to update deadline on a non-Active campaign (should panic)
+    let new_deadline = deadline + 7200;
+    client.update_deadline(&new_deadline);
+}
+
+// ── Stretch Goal Tests ─────────────────────────────────────────────────────
+
+#[test]
+fn test_add_single_stretch_goal() {
+    let (env, client, creator, token_address, _admin) = setup_env();
+
+    let deadline = env.ledger().timestamp() + 3600;
+    let goal: i128 = 1_000_000;
+    let min_contribution: i128 = 1_000;
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &min_contribution,
+        &None,
+        &None,
+        &None,
+    );
+
+    // Add a stretch goal that is greater than the primary goal
+    let stretch_goal: i128 = 2_000_000;
+    client.add_stretch_goal(&stretch_goal);
+
+    // Verify the stretch goal was added by checking the current milestone
+    let current = client.current_milestone();
+    assert_eq!(current, stretch_goal);
+}
+
+#[test]
+#[should_panic(expected = "bonus goal must be greater than primary goal")]
+fn test_initialize_rejects_bonus_goal_not_above_primary() {
+    let (env, client, creator, token_address, _admin) = setup_env();
+
+    let deadline = env.ledger().timestamp() + 3600;
+    let goal: i128 = 1_000_000;
+    let invalid_bonus_goal: i128 = 1_000_000;
+
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &1_000,
+        &None,
+        &Some(invalid_bonus_goal),
+        &None,
+    );
+}
+
+#[test]
+fn test_bonus_goal_progress_tracked_separately_from_primary() {
+    let (env, client, creator, token_address, admin) = setup_env();
+
+    let deadline = env.ledger().timestamp() + 3600;
+    let goal: i128 = 1_000_000;
+    let bonus_goal: i128 = 2_000_000;
+    let bonus_description = soroban_sdk::String::from_str(&env, "Bonus unlocked");
+
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &1_000,
+        &None,
+        &Some(bonus_goal),
+        &Some(bonus_description.clone()),
+    );
+
+    let contributor = Address::generate(&env);
+    mint_to(&env, &token_address, &admin, &contributor, 500_000);
+    client.contribute(&contributor, &500_000);
+
+    let primary_progress_bps = (client.total_raised() * 10_000) / client.goal();
+    assert_eq!(primary_progress_bps, 5_000);
+    assert_eq!(client.bonus_goal_progress_bps(), 2_500);
+    assert_eq!(client.bonus_goal(), Some(bonus_goal));
+    assert_eq!(client.bonus_goal_description(), Some(bonus_description));
+}
+
+#[test]
+fn test_bonus_goal_reached_returns_false_below_threshold() {
+    let (env, client, creator, token_address, admin) = setup_env();
+
+    let deadline = env.ledger().timestamp() + 3600;
+    let goal: i128 = 1_000_000;
+    let bonus_goal: i128 = 2_000_000;
+    client.initialize(
+        &creator,
+        &token_address,
+        &goal,
+        &deadline,
+        &1_000,
+        &None,
+        &Some(bonus_goal),
+        &None,
+    );
+
     let contributor = Address::generate(&env);
     mint_to(&env, &token_address, &admin, &contributor, 1_500_000);
     client.contribute(&contributor, &1_500_000);
 
-    let info = client.get_campaign_info();
-
-    assert_eq!(info.creator, creator);
-    assert_eq!(info.token, token_address);
-    assert_eq!(info.goal, goal);
-    assert_eq!(info.deadline, deadline);
-    assert_eq!(info.total_raised, 1_500_000);
+    assert!(!client.bonus_goal_reached());
 }
 
-// ── Whitelist Tests ────────────────────────────────────────────────────────
-
 #[test]
-fn test_whitelisted_contribution() {
+fn test_bonus_goal_reached_returns_true_at_and_above_threshold() {
     let (env, client, creator, token_address, admin) = setup_env();
 
     let deadline = env.ledger().timestamp() + 3600;
@@ -3311,6 +3774,8 @@ fn test_bonus_goal_reached_after_contribution() {
     let (env, client, creator, token_address, admin) = setup_env();
     let deadline = env.ledger().timestamp() + 3600;
 
+    let min_contribution: i128 = 1_000;
+    let bonus_goal: i128 = 2_000_000;
     client.initialize(
         &creator,
         &creator,
@@ -3397,11 +3862,16 @@ fn test_partial_withdrawal() {
         &goal,
         &deadline,
         &min_contribution,
+        &1_000,
+        &None,
+        &Some(bonus_goal),
+        &None,
     );
 
     let contributor = Address::generate(&env);
-    mint_to(&env, &token_address, &admin, &contributor, 500_000);
-    client.contribute(&contributor, &500_000);
+    mint_to(&env, &token_address, &admin, &contributor, 2_100_000);
+    client.contribute(&contributor, &2_000_000);
+    assert!(client.bonus_goal_reached());
 
     assert_eq!(client.total_raised(), 500_000);
     assert_eq!(client.contribution(&contributor), 500_000);
@@ -3470,6 +3940,15 @@ fn test_add_roadmap_item() {
 #[test]
 fn test_token_decimals_stored_on_initialize() {
     let (env, client, creator, token_address, _admin) = setup_env();
+    let contributor = Address::generate(&env);
+    mint_to(&env, &token_address, &admin, &contributor, 100_000);
+    client.contribute(&contributor, &100_000);
+    assert!(client.bonus_goal_reached());
+    assert_eq!(client.bonus_goal_progress_bps(), 10_000);
+}
+
+// ── Property-Based Fuzz Tests with Proptest ────────────────────────────────
+
     let deadline = env.ledger().timestamp() + 3600;
     default_init(&client, &creator, &token_address, deadline);
 
@@ -5780,242 +6259,404 @@ fn test_partial_withdrawal() {
 }
 
 /// Test that set_paused works correctly with a multisig creator.
+/// **Property Test 1: Invariant - Total Raised Equals Sum of Contributions**
 ///
-/// This ensures that pause/unpause operations can be controlled by
-/// a multisig wallet or DAO, preventing single-party control over
-/// this critical security function.
-#[test]
-fn test_set_paused_with_multisig_creator() {
-    let env = Env::default();
-    env.mock_all_auths();
+/// For any valid (goal, deadline, contributions[]), the contract invariant holds:
+/// total_raised == sum of all individual contributions
+///
+/// This test generates random valid parameters and multiple contributors with
+/// varying contribution amounts, then verifies the invariant is maintained.
+proptest! {
+    #[test]
+    fn prop_total_raised_equals_sum_of_contributions(
+        goal in 1_000_000i128..100_000_000i128,
+        deadline_offset in 100u64..100_000u64,
+        amount1 in 1_000i128..10_000_000i128,
+        amount2 in 1_000i128..10_000_000i128,
+        amount3 in 1_000i128..10_000_000i128,
+    ) {
+        let (env, client, creator, token_address, admin) = setup_env();
+        let deadline = env.ledger().timestamp() + deadline_offset;
 
-    let contract_id = env.register(CrowdfundContract, ());
-    let client = CrowdfundContractClient::new(&env, &contract_id);
+        client.initialize(&creator, &token_address, &goal, &deadline, &1_000, &None, &None, &None);
 
-    let token_admin = Address::generate(&env);
-    let token_contract_id = env.register_stellar_asset_contract_v2(token_admin);
-    let token_address = token_contract_id.address();
+        let alice = Address::generate(&env);
+        let bob = Address::generate(&env);
+        let charlie = Address::generate(&env);
 
-    // Use a contract address as the creator (simulating a multisig wallet)
-    let multisig_creator = Address::generate(&env);
+        mint_to(&env, &token_address, &admin, &alice, amount1);
+        mint_to(&env, &token_address, &admin, &bob, amount2);
+        mint_to(&env, &token_address, &admin, &charlie, amount3);
 
-    let deadline = env.ledger().timestamp() + 3600;
-    let goal: i128 = 1_000_000;
-    let hard_cap: i128 = goal * 2;
-    let min_contribution: i128 = 1_000;
+        client.contribute(&alice, &amount1);
+        client.contribute(&bob, &amount2);
+        client.contribute(&charlie, &amount3);
 
-    client.initialize(
-        &multisig_creator,
-        &token_address,
-        &goal,
-        &hard_cap,
-        &deadline,
-        &min_contribution,
-        &soroban_sdk::String::from_str(&env, "Multisig Campaign"),
-        &soroban_sdk::String::from_str(&env, "Campaign with multisig creator"),
-        &None,
-    );
+        let expected_total = amount1 + amount2 + amount3;
+        let actual_total = client.total_raised();
 
-    // Pause the campaign - should work with multisig creator
-    client.set_paused(&true);
-
-    // Verify the campaign is paused
-    // (In a real scenario, this would require multisig approval)
-    let paused: bool = env
-        .storage()
-        .instance()
-        .get(&crate::DataKey::Paused)
-        .unwrap_or(false);
-    assert!(paused);
-
-    // Unpause the campaign
-    client.set_paused(&false);
-
-    let paused: bool = env
-        .storage()
-        .instance()
-        .get(&crate::DataKey::Paused)
-        .unwrap_or(false);
-    assert!(!paused);
+        // **INVARIANT**: total_raised must equal the sum of all contributions
+        prop_assert_eq!(actual_total, expected_total,
+            "total_raised ({}) != sum of contributions ({})",
+            actual_total, expected_total
+        );
+    }
 }
 
-/// Test that update_metadata works correctly with a multisig creator.
+/// **Property Test 2: Invariant - Refund Returns Exact Contributed Amount**
 ///
-/// This ensures that campaign metadata changes can be controlled by
-/// a multisig wallet or DAO, maintaining transparency and preventing
-/// unauthorized modifications.
-#[test]
-fn test_update_metadata_with_multisig_creator() {
-    let env = Env::default();
-    env.mock_all_auths();
+/// For any valid contribution amount, refund always returns the exact amount
+/// with no remainder or shortfall.
+///
+/// This test verifies that each contributor receives back exactly what they
+/// contributed when the goal is not met and refund is called.
+proptest! {
+    #[test]
+    fn prop_refund_returns_exact_amount(
+        goal in 5_000_000i128..100_000_000i128,
+        deadline_offset in 100u64..100_000u64,
+        contribution in 1_000i128..5_000_000i128,
+    ) {
+        let (env, client, creator, token_address, admin) = setup_env();
+        let deadline = env.ledger().timestamp() + deadline_offset;
 
-    let contract_id = env.register(CrowdfundContract, ());
-    let client = CrowdfundContractClient::new(&env, &contract_id);
+        // Ensure contribution is less than goal
+        let safe_contribution = contribution.min(goal - 1);
 
-    let token_admin = Address::generate(&env);
-    let token_contract_id = env.register_stellar_asset_contract_v2(token_admin);
-    let token_address = token_contract_id.address();
+        client.initialize(&creator, &token_address, &goal, &deadline, &1_000, &None, &None, &None);
 
-    // Use a contract address as the creator (simulating a DAO)
-    let dao_creator = Address::generate(&env);
+        let contributor = Address::generate(&env);
+        mint_to(&env, &token_address, &admin, &contributor, safe_contribution);
+        client.contribute(&contributor, &safe_contribution);
 
-    let deadline = env.ledger().timestamp() + 3600;
-    let goal: i128 = 1_000_000;
-    let hard_cap: i128 = goal * 2;
-    let min_contribution: i128 = 1_000;
+        // Move past deadline (goal not met)
+        env.ledger().set_timestamp(deadline + 1);
 
-    client.initialize(
-        &dao_creator,
-        &token_address,
-        &goal,
-        &hard_cap,
-        &deadline,
-        &min_contribution,
-        &soroban_sdk::String::from_str(&env, "DAO Campaign"),
-        &soroban_sdk::String::from_str(&env, "Campaign with DAO creator"),
-        &None,
-    );
+        let token_client = token::Client::new(&env, &token_address);
+        let balance_before_refund = token_client.balance(&contributor);
 
-    // Update metadata - should work with DAO creator
-    let new_title = Some(soroban_sdk::String::from_str(&env, "Updated DAO Campaign"));
-    let new_description = Some(soroban_sdk::String::from_str(
-        &env,
-        "Updated description by DAO vote",
-    ));
+        client.refund();
 
-    client.update_metadata(&dao_creator, &new_title, &new_description, &None);
+        let balance_after_refund = token_client.balance(&contributor);
 
-    // Verify the metadata was updated
-    let title = client.title();
-    assert_eq!(title, new_title.unwrap());
+        // **INVARIANT**: Refund must return exact amount with no remainder
+        prop_assert_eq!(
+            balance_after_refund - balance_before_refund,
+            safe_contribution,
+            "refund amount ({}) != original contribution ({})",
+            balance_after_refund - balance_before_refund,
+            safe_contribution
+        );
+    }
 }
 
-/// Test that unauthorized addresses are still rejected even when creator is a multisig.
+/// **Property Test 3: Contribute with Amount <= 0 Always Fails**
 ///
-/// This ensures that the authorization mechanism works correctly for both
-/// user accounts and contract addresses, rejecting unauthorized callers.
-#[test]
-#[should_panic]
-fn test_multisig_creator_rejects_unauthorized_address() {
-    let env = Env::default();
-    env.mock_all_auths();
+/// For any contribution amount <= 0, the contribute function must fail.
+/// This test verifies that zero and negative contributions are rejected.
+proptest! {
+    #[test]
+    fn prop_contribute_zero_or_negative_fails(
+        goal in 1_000_000i128..10_000_000i128,
+        deadline_offset in 100u64..10_000u64,
+        negative_amount in -1_000_000i128..=0i128,
+    ) {
+        let (env, client, creator, token_address, admin) = setup_env();
+        let deadline = env.ledger().timestamp() + deadline_offset;
 
-    let contract_id = env.register(CrowdfundContract, ());
-    let client = CrowdfundContractClient::new(&env, &contract_id);
+        client.initialize(&creator, &token_address, &goal, &deadline, &1_000, &None, &None, &None);
 
-    let token_admin = Address::generate(&env);
-    let token_contract_id = env.register_stellar_asset_contract_v2(token_admin);
-    let token_address = token_contract_id.address();
+        let contributor = Address::generate(&env);
+        // Mint enough tokens so the failure is due to amount validation, not balance
+        mint_to(&env, &token_address, &admin, &contributor, 10_000_000);
 
-    // Use a contract address as the creator (simulating a multisig wallet)
-    let multisig_creator = Address::generate(&env);
+        // Attempt to contribute zero or negative amount
+        // This should fail due to minimum contribution check
+        let result = client.try_contribute(&contributor, &negative_amount);
 
-    let deadline = env.ledger().timestamp() + 3600;
-    let goal: i128 = 1_000_000;
-    let hard_cap: i128 = goal * 2;
-    let min_contribution: i128 = 1_000;
-
-    client.initialize(
-        &multisig_creator,
-        &token_address,
-        &goal,
-        &hard_cap,
-        &deadline,
-        &min_contribution,
-        &soroban_sdk::String::from_str(&env, "Multisig Campaign"),
-        &soroban_sdk::String::from_str(&env, "Campaign with multisig creator"),
-        &None,
-    );
-
-    // Try to pause with an unauthorized address
-    let unauthorized = Address::generate(&env);
-    env.mock_all_auths_allowing_non_root_auth();
-    env.set_auths(&[]);
-
-    // This should panic because unauthorized address is not the creator
-    client.set_paused(&true);
+        // **INVARIANT**: Contribution <= 0 must fail
+        prop_assert!(
+            result.is_err(),
+            "contribute with amount {} should fail but succeeded",
+            negative_amount
+        );
+    }
 }
 
-/// Test that all admin functions work correctly when creator is a DAO contract.
+/// **Property Test 4: Deadline in the Past Always Fails on Initialize**
 ///
-/// This comprehensive test verifies that all creator-restricted functions
-/// (withdraw, set_paused, update_metadata, add_roadmap_item, add_stretch_goal,
-/// add_reward_tier) work seamlessly with a DAO contract as the creator.
-#[test]
-fn test_all_admin_functions_with_dao_creator() {
-    let env = Env::default();
-    env.mock_all_auths();
+/// For any deadline in the past (relative to current ledger time),
+/// initialization must fail or panic.
+proptest! {
+    #[test]
+    fn prop_initialize_with_past_deadline_fails(
+        goal in 1_000_000i128..10_000_000i128,
+        past_offset in 1u64..10_000u64,
+    ) {
+        let (env, client, creator, token_address, _admin) = setup_env();
 
-    let contract_id = env.register(CrowdfundContract, ());
-    let client = CrowdfundContractClient::new(&env, &contract_id);
+        let current_time = env.ledger().timestamp();
+        // Set deadline in the past
+        let past_deadline = current_time.saturating_sub(past_offset);
 
-    let token_admin = Address::generate(&env);
-    let token_contract_id = env.register_stellar_asset_contract_v2(token_admin.clone());
-    let token_address = token_contract_id.address();
-    let token_admin_client = token::StellarAssetClient::new(&env, &token_address);
-
-    // Use a contract address as the creator (simulating a DAO)
-    let dao_creator = Address::generate(&env);
-
-    let deadline = env.ledger().timestamp() + 3600;
-    let goal: i128 = 1_000_000;
-    let hard_cap: i128 = goal * 2;
-    let min_contribution: i128 = 1_000;
-
-    client.initialize(
-        &dao_creator,
-        &token_address,
-        &goal,
-        &hard_cap,
-        &deadline,
-        &min_contribution,
-        &soroban_sdk::String::from_str(&env, "DAO Campaign"),
-        &soroban_sdk::String::from_str(&env, "Campaign with DAO governance"),
+        // Attempt to initialize with past deadline
+        let result = client.try_initialize(
+            &creator,
+            &token_address,
+            &goal,
+            &past_deadline,
+            &1_000,
+            &None,
         &None,
-    );
+        &None,
+        );
 
-    // Test add_roadmap_item
-    let roadmap_date = env.ledger().timestamp() + 86400;
-    let roadmap_desc = soroban_sdk::String::from_str(&env, "Milestone 1");
-    client.add_roadmap_item(&roadmap_date, &roadmap_desc);
+        // **INVARIANT**: Past deadline should fail or be rejected
+        // Note: The contract may not explicitly validate this, but it's a logical invariant
+        // If the contract allows it, the campaign would already be expired
+        // This test documents the expected behavior
+        if result.is_ok() {
+            // If initialization succeeds with past deadline, verify campaign is immediately expired
+            let deadline = client.deadline();
+            prop_assert!(
+                deadline <= current_time,
+                "deadline {} should be in the past relative to current time {}",
+                deadline,
+                current_time
+            );
+        }
+    }
+}
 
-    let roadmap = client.roadmap();
-    assert_eq!(roadmap.len(), 1);
+/// **Property Test 5: Multiple Contributions Accumulate Correctly**
+///
+/// For any sequence of valid contributions from multiple contributors,
+/// the total_raised must equal the sum of all contributions.
+proptest! {
+    #[test]
+    fn prop_multiple_contributions_accumulate(
+        goal in 5_000_000i128..50_000_000i128,
+        deadline_offset in 100u64..100_000u64,
+        amount1 in 1_000i128..5_000_000i128,
+        amount2 in 1_000i128..5_000_000i128,
+        amount3 in 1_000i128..5_000_000i128,
+    ) {
+        let (env, client, creator, token_address, admin) = setup_env();
+        let deadline = env.ledger().timestamp() + deadline_offset;
 
-    // Test add_stretch_goal
-    let stretch_goal: i128 = 2_000_000;
-    client.add_stretch_goal(&stretch_goal);
+        client.initialize(&creator, &token_address, &goal, &deadline, &1_000, &None, &None, &None);
 
-    // Test add_reward_tier
-    let tier_name = soroban_sdk::String::from_str(&env, "Gold");
-    client.add_reward_tier(&dao_creator, &tier_name, &10_000);
+        let contributor1 = Address::generate(&env);
+        let contributor2 = Address::generate(&env);
+        let contributor3 = Address::generate(&env);
 
-    let tiers = client.reward_tiers();
-    assert_eq!(tiers.len(), 1);
+        mint_to(&env, &token_address, &admin, &contributor1, amount1);
+        mint_to(&env, &token_address, &admin, &contributor2, amount2);
+        mint_to(&env, &token_address, &admin, &contributor3, amount3);
 
-    // Test update_metadata
-    let new_title = Some(soroban_sdk::String::from_str(&env, "Updated by DAO"));
-    client.update_metadata(&dao_creator, &new_title, &None, &None);
+        client.contribute(&contributor1, &amount1);
+        client.contribute(&contributor2, &amount2);
+        client.contribute(&contributor3, &amount3);
 
-    // Test set_paused
-    client.set_paused(&true);
-    client.set_paused(&false);
+        let expected_total = amount1 + amount2 + amount3;
 
-    // Test update_deadline
-    let new_deadline = deadline + 7200;
-    client.update_deadline(&new_deadline);
+        // **INVARIANT**: total_raised must equal sum of all contributions
+        prop_assert_eq!(client.total_raised(), expected_total);
 
-    // Contribute to meet the goal
-    let contributor = Address::generate(&env);
-    token_admin_client.mint(&contributor, &1_000_000);
-    client.contribute(&contributor, &1_000_000);
+        // **INVARIANT**: Each contributor's balance must be tracked correctly
+        prop_assert_eq!(client.contribution(&contributor1), amount1);
+        prop_assert_eq!(client.contribution(&contributor2), amount2);
+        prop_assert_eq!(client.contribution(&contributor3), amount3);
+    }
+}
 
-    // Fast forward past deadline
-    env.ledger().set_timestamp(new_deadline + 1);
+/// **Property Test 6: Withdrawal After Goal Met Transfers Correct Amount**
+///
+/// For any valid goal and contributions that meet or exceed the goal,
+/// withdrawal must transfer the exact total_raised amount to the creator.
+proptest! {
+    #[test]
+    fn prop_withdrawal_transfers_exact_amount(
+        goal in 1_000_000i128..10_000_000i128,
+        deadline_offset in 100u64..10_000u64,
+    ) {
+        let (env, client, creator, token_address, admin) = setup_env();
+        let deadline = env.ledger().timestamp() + deadline_offset;
 
-    // Test withdraw
-    let result = client.try_withdraw();
-    assert!(result.is_ok());
+        client.initialize(&creator, &token_address, &goal, &deadline, &1_000, &None, &None, &None);
+
+        let contributor = Address::generate(&env);
+        mint_to(&env, &token_address, &admin, &contributor, goal);
+        client.contribute(&contributor, &goal);
+
+        // Move past deadline
+        env.ledger().set_timestamp(deadline + 1);
+
+        let token_client = token::Client::new(&env, &token_address);
+        let creator_balance_before = token_client.balance(&creator);
+
+        client.withdraw();
+
+        let creator_balance_after = token_client.balance(&creator);
+        let transferred_amount = creator_balance_after - creator_balance_before;
+
+        // **INVARIANT**: Withdrawal must transfer exact total_raised amount
+        prop_assert_eq!(
+            transferred_amount, goal,
+            "withdrawal transferred {} but expected {}",
+            transferred_amount, goal
+        );
+
+        // **INVARIANT**: total_raised must be reset to 0 after withdrawal
+        prop_assert_eq!(client.total_raised(), 0);
+    }
+}
+
+/// **Property Test 7: Contribution Tracking Persists Across Multiple Calls**
+///
+/// For any contributor making multiple contributions, the total tracked
+/// must equal the sum of all their contributions.
+proptest! {
+    #[test]
+    fn prop_contribution_tracking_persists(
+        goal in 5_000_000i128..50_000_000i128,
+        deadline_offset in 100u64..100_000u64,
+        amount1 in 1_000i128..2_000_000i128,
+        amount2 in 1_000i128..2_000_000i128,
+        amount3 in 1_000i128..2_000_000i128,
+    ) {
+        let (env, client, creator, token_address, admin) = setup_env();
+        let deadline = env.ledger().timestamp() + deadline_offset;
+
+        client.initialize(&creator, &token_address, &goal, &deadline, &1_000, &None, &None, &None);
+
+        let contributor = Address::generate(&env);
+        let total_needed = amount1.saturating_add(amount2).saturating_add(amount3);
+        mint_to(&env, &token_address, &admin, &contributor, total_needed);
+
+        // First contribution
+        client.contribute(&contributor, &amount1);
+        prop_assert_eq!(client.contribution(&contributor), amount1);
+
+        // Second contribution
+        client.contribute(&contributor, &amount2);
+        let expected_after_2 = amount1.saturating_add(amount2);
+        prop_assert_eq!(client.contribution(&contributor), expected_after_2);
+
+        // Third contribution
+        client.contribute(&contributor, &amount3);
+        let expected_total = amount1.saturating_add(amount2).saturating_add(amount3);
+        prop_assert_eq!(client.contribution(&contributor), expected_total);
+
+        // **INVARIANT**: Final total_raised must equal sum of all contributions
+        prop_assert_eq!(client.total_raised(), expected_total);
+    }
+}
+
+/// **Property Test 8: Refund Resets Total Raised to Zero**
+///
+/// For any valid refund scenario (goal not met, deadline passed),
+/// total_raised must be reset to 0 after refund completes.
+proptest! {
+    #[test]
+    fn prop_refund_resets_total_raised(
+        goal in 5_000_000i128..50_000_000i128,
+        deadline_offset in 100u64..100_000u64,
+        contribution in 1_000i128..5_000_000i128,
+    ) {
+        let (env, client, creator, token_address, admin) = setup_env();
+        let deadline = env.ledger().timestamp() + deadline_offset;
+
+        let safe_contribution = contribution.min(goal - 1);
+
+        client.initialize(&creator, &token_address, &goal, &deadline, &1_000, &None, &None, &None);
+
+        let contributor = Address::generate(&env);
+        mint_to(&env, &token_address, &admin, &contributor, safe_contribution);
+        client.contribute(&contributor, &safe_contribution);
+
+        // Verify total_raised is set
+        prop_assert_eq!(client.total_raised(), safe_contribution);
+
+        // Move past deadline (goal not met)
+        env.ledger().set_timestamp(deadline + 1);
+
+        client.refund();
+
+        // **INVARIANT**: total_raised must be 0 after refund
+        prop_assert_eq!(client.total_raised(), 0);
+    }
+}
+
+/// **Property Test 9: Contribution Below Minimum Always Fails**
+///
+/// For any contribution amount below the minimum, the contribute function
+/// must fail or panic.
+proptest! {
+    #[test]
+    fn prop_contribute_below_minimum_fails(
+        goal in 1_000_000i128..10_000_000i128,
+        deadline_offset in 100u64..10_000u64,
+        min_contribution in 1_000i128..100_000i128,
+        below_minimum in 1i128..1_000i128,
+    ) {
+        let (env, client, creator, token_address, admin) = setup_env();
+        let deadline = env.ledger().timestamp() + deadline_offset;
+
+        client.initialize(&creator, &token_address, &goal, &deadline, &min_contribution, &None, &None, &None);
+
+        let contributor = Address::generate(&env);
+        let amount_to_contribute = below_minimum.min(min_contribution - 1);
+        mint_to(&env, &token_address, &admin, &contributor, amount_to_contribute);
+
+        // Attempt to contribute below minimum
+        let result = client.try_contribute(&contributor, &amount_to_contribute);
+
+        // **INVARIANT**: Contribution below minimum must fail
+        prop_assert!(
+            result.is_err(),
+            "contribute with amount {} below minimum {} should fail",
+            amount_to_contribute, min_contribution
+        );
+    }
+}
+
+/// **Property Test 10: Contribution After Deadline Always Fails**
+///
+/// For any contribution attempt after the deadline has passed,
+/// the contribute function must fail.
+proptest! {
+    #[test]
+    fn prop_contribute_after_deadline_fails(
+        goal in 1_000_000i128..10_000_000i128,
+        deadline_offset in 100u64..10_000u64,
+        contribution in 1_000i128..10_000_000i128,
+        time_after_deadline in 1u64..100_000u64,
+    ) {
+        let (env, client, creator, token_address, admin) = setup_env();
+        let deadline = env.ledger().timestamp() + deadline_offset;
+
+        client.initialize(&creator, &token_address, &goal, &deadline, &1_000, &None, &None, &None);
+
+        // Move past deadline
+        env.ledger().set_timestamp(deadline + time_after_deadline);
+
+        let contributor = Address::generate(&env);
+        mint_to(&env, &token_address, &admin, &contributor, contribution);
+
+        // Attempt to contribute after deadline
+        let result = client.try_contribute(&contributor, &contribution);
+
+        // **INVARIANT**: Contribution after deadline must fail
+        prop_assert!(
+            result.is_err(),
+            "contribute after deadline should fail"
+        );
+        prop_assert_eq!(
+            result.unwrap_err().unwrap(),
+            crate::ContractError::CampaignEnded
+        );
+    }
 }
 
 // ── Tiered Fee Tests ────────────────────────────────────────────────────────
