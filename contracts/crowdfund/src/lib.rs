@@ -1009,7 +1009,9 @@ impl CrowdfundContract {
             .get(&contribution_key)
             .unwrap_or(0);
 
-        let new_contribution = previous_amount.checked_add(amount).ok_or(ContractError::Overflow)?;
+        let new_contribution = previous_amount
+            .checked_add(amount)
+            .ok_or(ContractError::Overflow)?;
 
         env.storage()
             .persistent()
