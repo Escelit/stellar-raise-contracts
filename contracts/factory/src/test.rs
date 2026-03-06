@@ -29,6 +29,9 @@ mod crowdfund_wasm {
     );
     soroban_sdk::contractimport!(file = "../wasm/crowdfund.wasm");
     soroban_sdk::contractimport!(file = "../../target/wasm32-unknown-unknown/release/crowdfund.wasm");
+    soroban_sdk::contractimport!(
+        file = "../../target/wasm32-unknown-unknown/release/crowdfund.wasm"
+    );
 }
 
 fn create_token_contract<'a>(
