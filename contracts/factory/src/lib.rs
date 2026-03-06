@@ -399,13 +399,16 @@ impl FactoryContract {
 
         // Initialize the deployed contract.
         // Keep factory API stable: use default min contribution and no platform config.
-        let _min_contribution: i128 = 1_000;
-        let _no_platform_config: Option<soroban_sdk::Val> = None;
+        let min_contribution: i128 = 1_000;
+        let no_platform_config: Option<soroban_sdk::Val> = None;
+        let no_bonus_goal: Option<i128> = None;
+        let no_bonus_description: Option<soroban_sdk::String> = None;
         let _: () = env.invoke_contract(
             &deployed_address,
             &Symbol::new(&env, "initialize"),
             soroban_sdk::vec![
                 &env,
+                creator.clone().into_val(&env),
                 creator.into_val(&env),
                 token.into_val(&env),
                 goal.into_val(&env),
@@ -418,6 +421,11 @@ impl FactoryContract {
                 Option::<i128>::None.into_val(&env),
                 Option::<i128>::None.into_val(&env),
                 Option::<String>::None.into_val(&env)
+                deadline.into_val(&env),
+                min_contribution.into_val(&env),
+                no_platform_config.into_val(&env),
+                no_bonus_goal.into_val(&env),
+                no_bonus_description.into_val(&env)
             ],
         );
 
