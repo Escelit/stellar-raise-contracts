@@ -9,6 +9,12 @@
 /// - `audit_package`             — pass/fail scenarios per advisory
 /// - `audit_all`                 — batch audit correctness
 /// - `failing_results`           — filter helper
+/// - `parse_semver`            — valid, edge-case, and invalid inputs
+/// - `is_version_gte`          — boundary comparisons
+/// - `validate_integrity`      — sha512 presence and format
+/// - `audit_package`           — pass/fail scenarios per advisory
+/// - `audit_all`               — batch audit correctness
+/// - `failing_results`         — filter helper
 /// - `validate_lockfile_version` — supported/unsupported versions
 ///
 /// ## Security notes
@@ -27,6 +33,7 @@ mod tests {
 
     // Pull in the contract functions directly (same crate)
     use npm_package_lock::{
+    use crate::{
         audit_all, audit_package, failing_results, is_version_gte, parse_semver,
         validate_integrity, validate_lockfile_version, PackageEntry,
     };
