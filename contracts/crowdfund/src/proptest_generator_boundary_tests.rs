@@ -11,6 +11,12 @@
 //! - Deadline offset 100 (old buggy minimum) must be rejected.
 //! - `goal == 0` must never reach division logic.
 //! - `progress_bps` must never exceed `PROGRESS_BPS_CAP` (10 000).
+//! Comprehensive tests for proptest generator boundary conditions.
+//!
+//! Ensures boundary constants and validators behave correctly for frontend UI
+//! display and property-based test stability.
+
+#![cfg(test)]
 
 use proptest::prelude::*;
 use proptest::strategy::Just;
@@ -22,6 +28,12 @@ use crate::proptest_generator_boundary::{
 };
 
 // ── Strategy Definitions ──────────────────────────────────────────────────────
+    clamp_progress_bps, is_valid_contribution_amount, is_valid_deadline_offset,
+    is_valid_goal, is_valid_min_contribution, DEADLINE_OFFSET_MAX, DEADLINE_OFFSET_MIN,
+    FEE_BPS_CAP, GOAL_MAX, GOAL_MIN, MIN_CONTRIBUTION_FLOOR, PROGRESS_BPS_CAP,
+};
+
+// ── Strategy definitions ─────────────────────────────────────────────────────
 
 fn valid_deadline_offset_strategy() -> impl Strategy<Value = u64> {
     DEADLINE_OFFSET_MIN..=DEADLINE_OFFSET_MAX
@@ -32,6 +44,11 @@ fn valid_goal_strategy() -> impl Strategy<Value = i128> {
 }
 
 // ── Property Tests ────────────────────────────────────────────────────────────
+fn valid_min_contribution_strategy(goal: i128) -> impl Strategy<Value = i128> {
+    MIN_CONTRIBUTION_FLOOR..=goal
+}
+
+// ── Property tests ───────────────────────────────────────────────────────────
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(256))]
@@ -49,6 +66,7 @@ proptest! {
     }
 
     /// Deadline offset below DEADLINE_OFFSET_MIN is rejected.
+    /// Deadline offset below DEADLINE_OFFSET_MIN is rejected (typo fix: was 100).
     #[test]
     fn prop_deadline_offset_below_min_rejected(offset in 0u64..DEADLINE_OFFSET_MIN) {
         prop_assert!(!is_valid_deadline_offset(offset));
@@ -95,6 +113,7 @@ proptest! {
     /// Clamp progress bps never exceeds PROGRESS_BPS_CAP.
     #[test]
     fn prop_clamp_progress_bps_capped(raw in -1_000i128..=20_000i128) {
+    fn prop_clamp_progress_bps_capped(raw in -1000i128..=20000i128) {
         let clamped = clamp_progress_bps(raw);
         prop_assert!(clamped <= PROGRESS_BPS_CAP);
     }
@@ -107,6 +126,7 @@ proptest! {
 }
 
 // ── Unit Tests for Edge Cases ─────────────────────────────────────────────────
+// ── Unit tests for edge cases ────────────────────────────────────────────────
 
 #[cfg(test)]
 mod edge_case_tests {
@@ -124,6 +144,9 @@ mod edge_case_tests {
     }
 
     /// @security goal == 0 must be rejected to prevent division-by-zero.
+        assert!(is_valid_deadline_offset(1000));
+    }
+
     #[test]
     fn goal_zero_rejected() {
         assert!(!is_valid_goal(0));

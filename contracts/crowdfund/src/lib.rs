@@ -75,6 +75,9 @@ mod auth_tests;
 #[cfg(test)]
 #[path = "refund_single_token.test.rs"]
 mod refund_single_token_test;
+mod proptest_generator_boundary;
+#[cfg(test)]
+mod proptest_generator_boundary_tests;
 #[cfg(test)]
 mod test;
 #[cfg(test)]
