@@ -57,3 +57,5 @@ yarn-error.log*
 
 contracts/*/test_snapshots/
 node_modules
+coverage/
+

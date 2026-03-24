@@ -30,6 +30,7 @@ cd stellar-raise-contracts
 rustup target add wasm32-unknown-unknown
 curl -Ls https://soroban.stellar.org/install-soroban.sh | sh
 npm ci
+npm ci  # Frontend deps
 cargo build --release --target wasm32-unknown-unknown
 cargo test
 npm test
@@ -69,6 +70,7 @@ npm ci
 ```bash
 cargo build --release --target wasm32-unknown-unknown -p crowdfund
 # Output: target/wasm32-unknown-unknown/release/crowdfund.wasm
+# Output: contracts/crowdfund/target/wasm32-unknown-unknown/release/crowdfund.wasm
 ```
 
 ## Verification
@@ -85,6 +87,10 @@ Expected: All checks pass (Rust, wasm target, Stellar CLI, cargo build).
 ```bash
 DEADLINE=$(date -d '+30 days' +%s)
 ./scripts/deploy.sh \
+### Automated Script
+```bash
+DEADLINE=$(date -d '+30 days' +%s)
+./scripts/deployment_shell_script.sh \\
   'GYOUR_CREATOR_ADDRESS' 'GTOKEN_ADDRESS' 1000000000 $DEADLINE 10000000
 ```
 
@@ -96,6 +102,11 @@ DEADLINE=$(date -d '+30 days' +%s)
 | 2 | Build failure |
 | 3 | Deploy failure |
 | 4 | Initialize failure |
+| 1 | Missing tool |
+| 2 | Bad args |
+| 3 | Build fail |
+| 4 | Deploy fail |
+| 5 | Init fail |
 
 ### Manual
 ```bash
@@ -160,6 +171,13 @@ CONTRACT_ID=$(./scripts/deploy.sh ... | grep 'step=done' | grep -oP 'contract_id
 
 # Check for any error
 ./scripts/interact.sh ... | grep -q 'status=error' && echo "FAILED"
+stellar contract install \\
+  --wasm contracts/crowdfund/target/wasm32-unknown-unknown/release/crowdfund.wasm \\
+  --source YOUR_SECRET \\
+  --network testnet
+
+# Initialize
+stellar contract invoke ... -- initialize --creator ... --token ... --goal ... --deadline ... --min_contribution ...
 ```
 
 ## Troubleshooting
@@ -190,7 +208,33 @@ npm test                 # Frontend + installation tests
 ```
 
 ## Development
+| Tests timeout | Increase `cargo test -- --test-threads=1` |
+
+## Security Assumptions {#security-assumptions}
+- **Admin Auth**: Only creator/admin can `initialize`, `withdraw`, `upgrade` (require_auth enforced).
+- **Contributor Auth**: `contribute`/`refund_single` requires caller auth.
+- **Pull Refunds**: Individual claims prevent gas DoS (scalable).
+- **Upgrade Safety**: WASM hash validated; storage preserved.
+- **Bounds**: Goal/deadline/min contrib validated (proptest covered).
+- **Platform Fee**: Capped <100%.
+- **Events**: Bounded emission (MAX_NFT_MINT_BATCH).
+
+All validated in `contracts/crowdfund/src/*.rs` tests.
+
+## Testing {#testing}
+```bash
+cargo test --workspace  # Contracts (100% coverage)
+npm test                # Frontend + installation tests
+```
+
+## Development {#development}
 - Branch: `git checkout -b feat/your-feature develop`
 - Format: `cargo fmt --all`
 - Lint: `cargo clippy --all-targets`
 - PR to `develop`
+
+**NatSpec-style Comments**: All public fns documented with `/// @notice`, `/// @param`.
+
+---
+*Last updated: $(date)* | [Edit on GitHub](...)"
+

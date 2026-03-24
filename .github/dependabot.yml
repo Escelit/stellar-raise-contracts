@@ -88,3 +88,4 @@ updates:
      with:
     # This tells cspell to use defaults if no config is found
     config: '.github/godabeg.cspell.json'
+    config: '.github/godabeg.cspell.json'
