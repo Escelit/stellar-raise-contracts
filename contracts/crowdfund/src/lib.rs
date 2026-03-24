@@ -133,6 +133,9 @@ pub mod refund_single_token;
 #[cfg(test)]
 mod refund_single_token_test;
 mod refund_single_token_tests;
+mod refund_single_token_tests;
+#[cfg(test)]
+mod test;
 
 const CONTRACT_VERSION: u32 = 3;
 #[allow(dead_code)]
@@ -1702,50 +1705,49 @@ impl CrowdfundContract {
                     token_id += 1;
         // Bounded NFT minting: process at most MAX_NFT_MINT_BATCH contributors
         // per withdraw() call to cap event emission and gas consumption.
-        let nft_minted_count: u32 =
-            if let Some(nft_contract) = env
+        let nft_minted_count: u32 = if let Some(nft_contract) = env
+            .storage()
+            .instance()
+            .get::<_, Address>(&DataKey::NFTContract)
+        {
+            let contributors: Vec<Address> = env
                 .storage()
-                .instance()
-                .get::<_, Address>(&DataKey::NFTContract)
-            {
-                let contributors: Vec<Address> = env
+                .persistent()
+                .get(&DataKey::Contributors)
+                .unwrap_or_else(|| Vec::new(&env));
+            let mut token_id: u64 = 1;
+            let mut minted: u32 = 0;
+            for contributor in contributors.iter() {
+                if minted >= MAX_NFT_MINT_BATCH {
+                    break;
+                }
+                let contribution: i128 = env
                     .storage()
                     .persistent()
-                    .get(&DataKey::Contributors)
-                    .unwrap_or_else(|| Vec::new(&env));
-                let mut token_id: u64 = 1;
-                let mut minted: u32 = 0;
-                for contributor in contributors.iter() {
-                    if minted >= MAX_NFT_MINT_BATCH {
-                        break;
-                    }
-                    let contribution: i128 = env
-                        .storage()
-                        .persistent()
-                        .get(&DataKey::Contribution(contributor.clone()))
-                        .unwrap_or(0);
-                    if contribution > 0 {
-                        env.invoke_contract::<()>(
-                            &nft_contract,
-                            &Symbol::new(&env, "mint"),
-                            Vec::from_array(
-                                &env,
-                                [contributor.into_val(&env), token_id.into_val(&env)],
-                            ),
-                        );
-                        token_id += 1;
-                        minted += 1;
-                    }
+                    .get(&DataKey::Contribution(contributor.clone()))
+                    .unwrap_or(0);
+                if contribution > 0 {
+                    env.invoke_contract::<()>(
+                        &nft_contract,
+                        &Symbol::new(&env, "mint"),
+                        Vec::from_array(
+                            &env,
+                            [contributor.into_val(&env), token_id.into_val(&env)],
+                        ),
+                    );
+                    token_id += 1;
+                    minted += 1;
                 }
-                // Single summary event instead of one event per contributor.
-                if minted > 0 {
-                    env.events()
-                        .publish(("campaign", "nft_batch_minted"), minted);
-                }
-                minted
-            } else {
-                0
-            };
+            }
+            // Single summary event instead of one event per contributor.
+            if minted > 0 {
+                env.events()
+                    .publish(("campaign", "nft_batch_minted"), minted);
+            }
+            minted
+        } else {
+            0
+        };
 
         // Single withdrawal event carrying payout, fee info, and mint count.
         env.events().publish(
@@ -1993,23 +1995,10 @@ impl CrowdfundContract {
     ///      script-level parameter typos and accidental reverse transfer attempts.
     /// @param contributor Contributor address to refund.
     /// @return Ok(()) when the refund is complete or nothing is owed.
-    pub fn refund_single(env: Env, contributor: Address) -> Result<(), ContractError> {
-        contributor.require_auth();
-
-        let status: Status = env.storage().instance().get(&DataKey::Status).unwrap();
-        if status != Status::Active {
     /// Claim a refund for a single contributor (pull-based).
     ///
-    /// This is the **preferred** refund mechanism, replacing the deprecated
-    /// batch [`refund`] function. Each contributor independently claims their
-    /// own refund after the campaign deadline has passed and the goal was not met.
-    ///
-    /// # Why pull-based?
-    ///
-    /// The old `refund()` iterated over every contributor in a single transaction,
-    /// which is unsafe for large contributor lists (unbounded gas). `refund_single`
-    /// processes exactly one contributor per call, making gas costs predictable and
-    /// enabling scripts to batch calls off-chain at their own pace.
+    /// Each contributor independently claims their own refund after the campaign
+    /// deadline has passed and the goal was not met.
     ///
     /// # Arguments
     /// * `contributor` – The address claiming the refund. Must match the caller.
@@ -2017,26 +2006,15 @@ impl CrowdfundContract {
     /// # Errors
     /// * [`ContractError::CampaignStillActive`] – Deadline has not yet passed.
     /// * [`ContractError::GoalReached`]         – Goal was met; no refunds available.
-    /// * [`ContractError::NothingToRefund`]     – Caller has no contribution on record
-    ///                                            (or already claimed their refund).
-    ///
-    /// # Panics
-    /// * If the campaign status is not `Active` or `Refunded`.
-    ///   (A `Successful` or `Cancelled` campaign cannot be refunded.)
+    /// * [`ContractError::NothingToRefund`]     – Caller has no contribution on record.
     ///
     /// # Security
     /// * Requires `contributor.require_auth()` — only the contributor can claim.
-    /// * Zeroes the contribution record **before** emitting the event (checks-effects-interactions).
+    /// * Zeroes the contribution record **before** transfer (checks-effects-interactions).
     /// * Uses `checked_sub` to prevent underflow on `total_raised`.
-    pub fn refund_single(
-        env: Env,
-        contributor: Address,
-    ) -> Result<(), ContractError> {
+    pub fn refund_single(env: Env, contributor: Address) -> Result<(), ContractError> {
         contributor.require_auth();
 
-        // Only allow refunds when the campaign is Active or already in Refunded
-        // state (so individual contributors can still claim after the first batch
-        // refund partially ran, if ever).
         let status: Status = env.storage().instance().get(&DataKey::Status).unwrap();
         if status == Status::Successful || status == Status::Cancelled {
             panic!("campaign is not active");
@@ -2048,14 +2026,12 @@ impl CrowdfundContract {
         }
 
         let goal: i128 = env.storage().instance().get(&DataKey::Goal).unwrap();
-        let total: i128 = env.storage().instance().get(&DataKey::TotalRaised).unwrap();
         let total: i128 = env
             .storage()
             .instance()
             .get(&DataKey::TotalRaised)
             .unwrap_or(0);
 
-        // If the goal was reached, no refunds are permitted.
         if total >= goal {
             return Err(ContractError::GoalReached);
         }
@@ -2068,54 +2044,26 @@ impl CrowdfundContract {
             .unwrap_or(0);
 
         if amount == 0 {
-            return Ok(());
-        }
-
-        let token_address: Address = env.storage().instance().get(&DataKey::Token).unwrap();
-        let token_client = token::Client::new(&env, &token_address);
-        refund_single_transfer(
-            &token_client,
-            &env.current_contract_address(),
-            &contributor,
-            amount,
-        );
-
-        env.storage().persistent().set(&contribution_key, &0i128);
             return Err(ContractError::NothingToRefund);
         }
 
         // ── Checks-Effects-Interactions ──────────────────────────────────────
-        // Zero the record first to prevent any re-entrancy / double-claim.
-        env.storage()
-            .persistent()
-            .set(&contribution_key, &0i128);
+        env.storage().persistent().set(&contribution_key, &0i128);
         env.storage()
             .persistent()
             .extend_ttl(&contribution_key, 100, 100);
 
         let new_total = total.checked_sub(amount).ok_or(ContractError::Overflow)?;
-        env.storage().instance().set(&DataKey::TotalRaised, &new_total);
-
-        env.events()
-            .publish(("campaign", "refund_single"), (contributor, amount));
-        // Decrement global total with underflow protection.
-        let new_total = total
-            .checked_sub(amount)
-            .expect("total_raised underflow in refund_single");
         env.storage()
             .instance()
             .set(&DataKey::TotalRaised, &new_total);
 
-        // Transfer tokens back to the contributor.
         let token_address: Address = env.storage().instance().get(&DataKey::Token).unwrap();
         let token_client = token::Client::new(&env, &token_address);
         token_client.transfer(&env.current_contract_address(), &contributor, &amount);
 
-        // Emit a structured event for off-chain indexers and scripts.
-        env.events().publish(
-            ("campaign", "refund_single"),
-            (contributor, amount),
-        );
+        env.events()
+            .publish(("campaign", "refund_single"), (contributor, amount));
 
         Ok(())
     }

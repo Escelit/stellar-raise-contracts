@@ -18,6 +18,7 @@ The `SorobanSdkMinor` contract demonstrates the key API changes in Soroban SDK v
 
 ```rust
 /// Store the admin address (admin must authorize). One-time; panics on re-init.
+/// Store the admin address (admin must authorize).
 fn init(env: Env, admin: Address);
 
 /// Verify caller authorization — returns true or panics.
