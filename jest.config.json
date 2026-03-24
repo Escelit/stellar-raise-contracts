@@ -31,7 +31,7 @@
         "module": "commonjs",
         "allowJs": true
       }
-    ]
+    }]
   },
   "testMatch": [
     "**/*.test.(ts|tsx|js|jsx)"

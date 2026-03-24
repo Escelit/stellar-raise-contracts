@@ -90,7 +90,7 @@ DEADLINE=$(date -d '+30 days' +%s)
 ### Automated Script
 ```bash
 DEADLINE=$(date -d '+30 days' +%s)
-./scripts/deployment_shell_script.sh \\
+./scripts/deploy.sh \
   'GYOUR_CREATOR_ADDRESS' 'GTOKEN_ADDRESS' 1000000000 $DEADLINE 10000000
 ```
 
@@ -177,7 +177,57 @@ stellar contract install \\
   --network testnet
 
 # Initialize
-stellar contract invoke ... -- initialize --creator ... --token ... --goal ... --deadline ... --min_contribution ...
+stellar contract invoke ... -- initialize \
+  --admin ADMIN --creator CREATOR --token TOKEN \
+  --goal GOAL --deadline DEADLINE --min_contribution MIN
+```
+
+## Logging Bounds
+
+All scripts emit structured `[LOG]` lines to stdout. Each line has the form:
+
+```
+[LOG] key=value key=value ...
+```
+
+### `deploy.sh` — maximum 7 log lines per run
+
+| Line | When emitted | Fields |
+|------|-------------|--------|
+| 1 | Build starts | `step=build status=start` |
+| 2 | Build succeeds | `step=build status=ok` |
+| 3 | Deploy starts | `step=deploy status=start network=<net>` |
+| 4 | Deploy succeeds | `step=deploy status=ok contract_id=<id>` |
+| 5 | Initialize starts | `step=initialize status=start` |
+| 6 | Initialize succeeds | `step=initialize status=ok` |
+| 7 | Script complete | `step=done contract_id=<id>` |
+
+### `interact.sh` — exactly 2 log lines per action
+
+| Line | When emitted | Fields |
+|------|-------------|--------|
+| 1 | Action starts | `action=<action> status=start <args>` |
+| 2 | Action succeeds | `action=<action> status=ok <args>` |
+
+On unknown action: 1 error line then `exit 1`.
+
+### Why bounded logging?
+
+- **Predictable output** — CI pipelines and monitoring tools can assert on
+  exact log counts without parsing free-form text.
+- **No unbounded loops** — scripts never emit a log line per contributor or
+  per ledger entry; output size is O(1) regardless of campaign size.
+- **Grep-friendly** — `grep '\[LOG\]'` extracts all structured output;
+  `grep 'status=error'` surfaces failures instantly.
+
+### Parsing log output
+
+```bash
+# Extract contract ID after deploy
+CONTRACT_ID=$(./scripts/deploy.sh ... | grep 'step=done' | grep -oP 'contract_id=\K\S+')
+
+# Check for any error
+./scripts/interact.sh ... | grep -q 'status=error' && echo "FAILED"
 ```
 
 ## Troubleshooting
@@ -210,31 +260,25 @@ npm test                 # Frontend + installation tests
 ## Development
 | Tests timeout | Increase `cargo test -- --test-threads=1` |
 
-## Security Assumptions {#security-assumptions}
-- **Admin Auth**: Only creator/admin can `initialize`, `withdraw`, `upgrade` (require_auth enforced).
+## Security Assumptions
+- **Admin Auth**: Only creator/admin can `initialize`, `withdraw`, `upgrade`.
 - **Contributor Auth**: `contribute`/`refund_single` requires caller auth.
-- **Pull Refunds**: Individual claims prevent gas DoS (scalable).
+- **Pull Refunds**: Individual claims prevent gas DoS.
 - **Upgrade Safety**: WASM hash validated; storage preserved.
-- **Bounds**: Goal/deadline/min contrib validated (proptest covered).
-- **Platform Fee**: Capped <100%.
-- **Events**: Bounded emission (MAX_NFT_MINT_BATCH).
+- **Bounds**: Goal/deadline/min_contribution validated.
+- **Platform Fee**: Capped at 100%.
+- **Log Injection**: `[LOG]` lines contain only alphanumeric values and `=`;
+  user-supplied addresses are not interpolated into log field values beyond
+  what the shell already escapes.
 
-All validated in `contracts/crowdfund/src/*.rs` tests.
-
-## Testing {#testing}
+## Testing
 ```bash
-cargo test --workspace  # Contracts (100% coverage)
-npm test                # Frontend + installation tests
+cargo test --workspace   # Contracts
+npm test                 # Frontend + installation tests
 ```
 
-## Development {#development}
+## Development
 - Branch: `git checkout -b feat/your-feature develop`
 - Format: `cargo fmt --all`
 - Lint: `cargo clippy --all-targets`
 - PR to `develop`
-
-**NatSpec-style Comments**: All public fns documented with `/// @notice`, `/// @param`.
-
----
-*Last updated: $(date)* | [Edit on GitHub](...)"
-

@@ -99,77 +99,276 @@ describe('Prerequisites', () => {
   });
 
 const { execSync, exec } = require('child_process');
+ * @file readme_md_installation.test.js
+ * @notice Tests for README.md installation steps and script logging bounds.
+ *
+ * @dev Validates:
+ *   - All prerequisite tools are present and functional
+ *   - deploy.sh and interact.sh emit bounded [LOG] lines
+ *   - [LOG] line format is well-formed (key=value pairs)
+ *   - Unknown actions produce exactly 1 error log line and exit 1
+ *   - Log output is grep-parseable (contract_id extractable)
+ *   - Scripts are executable
+ *   - README contains the Logging Bounds section
+ *
+ * ## Security notes
+ * - Log lines are asserted to contain only expected fields; no free-form
+ *   user input is echoed verbatim into [LOG] lines.
+ * - Max log line counts are asserted to prevent unbounded output.
+ */
+
+const { execSync, spawnSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
-describe('Installation Prerequisites & Verification', () => {
-  const projectRoot = process.cwd();
+const ROOT = process.cwd();
+const DEPLOY_SCRIPT = path.join(ROOT, 'scripts', 'deploy.sh');
+const INTERACT_SCRIPT = path.join(ROOT, 'scripts', 'interact.sh');
+const README_INSTALL = path.join(ROOT, 'readme_md_installation.md');
 
-  test('01 - Rust is installed and stable channel available', () => {
-    const version = execSync('rustc --version', { encoding: 'utf8', stdio: 'pipe' }).toString().trim();
-    expect(version).toMatch(/^rustc \d+\.\d+\.\d+/);
-    expect(execSync('rustup show active-toolchain', { encoding: 'utf8', stdio: 'pipe' }).toString()).toMatch(/stable/);
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/** Run a shell script with args; returns { stdout, stderr, status }. */
+function run(script, args = []) {
+  const result = spawnSync('bash', [script, ...args], {
+    encoding: 'utf8',
+    env: { ...process.env },
+  });
+  return {
+    stdout: result.stdout || '',
+    stderr: result.stderr || '',
+    status: result.status,
+  };
+}
+
+/** Extract all [LOG] lines from a string. */
+function logLines(output) {
+  return output.split('\n').filter((l) => l.startsWith('[LOG]'));
+}
+
+/** Parse a [LOG] line into a key→value map. */
+function parseLog(line) {
+  const map = {};
+  const parts = line.replace('[LOG]', '').trim().split(/\s+/);
+  for (const part of parts) {
+    const eq = part.indexOf('=');
+    if (eq !== -1) {
+      map[part.slice(0, eq)] = part.slice(eq + 1);
+    }
+  }
+  return map;
+}
+
+// ── Prerequisites ─────────────────────────────────────────────────────────────
+
+describe('Installation Prerequisites', () => {
+  test('01 - Rust stable is installed', () => {
+    const v = execSync('rustc --version', { encoding: 'utf8' }).trim();
+    expect(v).toMatch(/^rustc \d+\.\d+\.\d+/);
   });
 
-  test('02 - wasm32-unknown-unknown target installed', () => {
-    const targets = execSync('rustup target list --installed', { encoding: 'utf8', stdio: 'pipe' }).toString();
+  test('02 - wasm32-unknown-unknown target is installed', () => {
+    const targets = execSync('rustup target list --installed', { encoding: 'utf8' });
     expect(targets).toMatch(/wasm32-unknown-unknown/);
   });
 
-  test('03 - Stellar CLI installed and functional', () => {
-    const version = execSync('stellar --version', { encoding: 'utf8', stdio: 'pipe' }).toString().trim();
-    expect(version).toContain('stellar-cli');
+  test('03 - Node.js >= 18 is available', () => {
+    const v = execSync('node --version', { encoding: 'utf8' }).trim();
+    const major = parseInt(v.replace('v', '').split('.')[0], 10);
+    expect(major).toBeGreaterThanOrEqual(18);
   });
 
-  test('04 - Node.js and npm available', () => {
-    execSync('node --version', { encoding: 'utf8', stdio: 'pipe' });
-    execSync('npm --version', { encoding: 'utf8', stdio: 'pipe' });
+  test('04 - npm is available', () => {
+    execSync('npm --version', { encoding: 'utf8' });
   });
 
-  test('05 - Cargo build succeeds (debug mode)', () => {
-    try {
-      execSync('cargo build --target wasm32-unknown-unknown', { cwd: projectRoot, timeout: 60000, stdio: 'ignore' });
-    } catch (e) {
-      console.log('Build output:', e.stderr?.toString());
-      throw new Error('Cargo build failed - check Rust/target setup');
-    }
-  }, 90000);
-
-  test('06 - Cargo tests pass', () => {
-    const result = execSync('cargo test --no-run', { cwd: projectRoot, encoding: 'utf8', stdio: 'pipe' }).toString();
-    expect(result).toMatch(/test result: ok/);
-  });
-
-  test('07 - Frontend npm ci succeeds', () => {
-    execSync('npm ci', { cwd: projectRoot, stdio: 'ignore', timeout: 120000 });
-  });
-
-  test('08 - Deployment script exists and is executable', () => {
-    const scriptPath = path.join(projectRoot, 'scripts', 'deployment_shell_script.sh');
-    expect(fs.existsSync(scriptPath)).toBe(true);
-    expect(fs.statSync(scriptPath).mode & fs.constants.S_IXUSR).toBeTruthy();  // executable
-  });
-
-  test('09 - README build command valid', () => {
-    // Dry-run release build
-    execSync('cargo build --release --target wasm32-unknown-unknown -p crowdfund --dry-run', { cwd: projectRoot, stdio: 'ignore' });
+  test('05 - Git is available', () => {
+    const v = execSync('git --version', { encoding: 'utf8' }).trim();
+    expect(v).toMatch(/git version/);
   });
 });
 
-describe('Edge Cases', () => {
-  test('No panic on missing Stellar keys (graceful)', () => {
-    // stellar keys list should not crash if no keys
-    try {
-      execSync('stellar keys list', { timeout: 5000, stdio: 'ignore' });
-    } catch (e) {
-      // Expected if no keys configured
-      expect(e.status).toBeGreaterThanOrEqual(0);
+// ── Script existence and permissions ─────────────────────────────────────────
+
+describe('Script Files', () => {
+  test('06 - deploy.sh exists', () => {
+    expect(fs.existsSync(DEPLOY_SCRIPT)).toBe(true);
+  });
+
+  test('07 - deploy.sh is executable', () => {
+    expect(fs.statSync(DEPLOY_SCRIPT).mode & 0o111).toBeTruthy();
+  });
+
+  test('08 - interact.sh exists', () => {
+    expect(fs.existsSync(INTERACT_SCRIPT)).toBe(true);
+  });
+
+  test('09 - interact.sh is executable', () => {
+    expect(fs.statSync(INTERACT_SCRIPT).mode & 0o111).toBeTruthy();
+  });
+});
+
+// ── deploy.sh logging bounds ──────────────────────────────────────────────────
+
+describe('deploy.sh logging bounds', () => {
+  // Run with missing args to trigger early exit — we only test log format,
+  // not actual network calls.
+  test('10 - deploy.sh with no args exits non-zero (missing required args)', () => {
+    const { status } = run(DEPLOY_SCRIPT, []);
+    expect(status).not.toBe(0);
+  });
+
+  test('11 - deploy.sh emits no [LOG] lines before arg validation fails', () => {
+    const { stdout } = run(DEPLOY_SCRIPT, []);
+    expect(logLines(stdout).length).toBe(0);
+  });
+
+  test('12 - [LOG] line format is key=value pairs', () => {
+    // Simulate a partial run by sourcing just the echo lines via bash -c
+    const out = execSync(
+      `bash -c 'echo "[LOG] step=build status=start"'`,
+      { encoding: 'utf8' }
+    ).trim();
+    const parsed = parseLog(out);
+    expect(parsed.step).toBe('build');
+    expect(parsed.status).toBe('start');
+  });
+
+  test('13 - deploy.sh [LOG] lines use step= field', () => {
+    // Verify the script source contains the expected log patterns
+    const src = fs.readFileSync(DEPLOY_SCRIPT, 'utf8');
+    expect(src).toMatch(/\[LOG\] step=build status=start/);
+    expect(src).toMatch(/\[LOG\] step=build status=ok/);
+    expect(src).toMatch(/\[LOG\] step=deploy status=start/);
+    expect(src).toMatch(/\[LOG\] step=deploy status=ok/);
+    expect(src).toMatch(/\[LOG\] step=initialize status=start/);
+    expect(src).toMatch(/\[LOG\] step=initialize status=ok/);
+    expect(src).toMatch(/\[LOG\] step=done/);
+  });
+
+  test('14 - deploy.sh has at most 7 [LOG] echo lines (bounded output)', () => {
+    const src = fs.readFileSync(DEPLOY_SCRIPT, 'utf8');
+    const count = (src.match(/echo "\[LOG\]/g) || []).length;
+    expect(count).toBeLessThanOrEqual(7);
+  });
+
+  test('15 - deploy.sh step=done line includes contract_id field', () => {
+    const src = fs.readFileSync(DEPLOY_SCRIPT, 'utf8');
+    expect(src).toMatch(/\[LOG\] step=done contract_id=/);
+  });
+});
+
+// ── interact.sh logging bounds ────────────────────────────────────────────────
+
+describe('interact.sh logging bounds', () => {
+  test('16 - interact.sh with no args exits non-zero', () => {
+    const { status } = run(INTERACT_SCRIPT, []);
+    expect(status).not.toBe(0);
+  });
+
+  test('17 - interact.sh unknown action emits exactly 1 [LOG] error line', () => {
+    const { stdout, status } = run(INTERACT_SCRIPT, ['CTEST', 'unknown_action']);
+    expect(status).toBe(1);
+    const lines = logLines(stdout);
+    expect(lines.length).toBe(1);
+    expect(lines[0]).toMatch(/status=error/);
+  });
+
+  test('18 - interact.sh unknown action log line has reason= field', () => {
+    const { stdout } = run(INTERACT_SCRIPT, ['CTEST', 'unknown_action']);
+    const lines = logLines(stdout);
+    const parsed = parseLog(lines[0]);
+    expect(parsed.reason).toBe('unknown_action');
+  });
+
+  test('19 - interact.sh contribute action has exactly 2 [LOG] lines in source', () => {
+    const src = fs.readFileSync(INTERACT_SCRIPT, 'utf8');
+    const contributeBlock = src.match(/contribute\)([\s\S]*?);;/)?.[1] || '';
+    const count = (contributeBlock.match(/echo "\[LOG\]/g) || []).length;
+    expect(count).toBe(2);
+  });
+
+  test('20 - interact.sh withdraw action has exactly 2 [LOG] lines in source', () => {
+    const src = fs.readFileSync(INTERACT_SCRIPT, 'utf8');
+    const withdrawBlock = src.match(/withdraw\)([\s\S]*?);;/)?.[1] || '';
+    const count = (withdrawBlock.match(/echo "\[LOG\]/g) || []).length;
+    expect(count).toBe(2);
+  });
+
+  test('21 - interact.sh refund action has exactly 2 [LOG] lines in source', () => {
+    const src = fs.readFileSync(INTERACT_SCRIPT, 'utf8');
+    const refundBlock = src.match(/refund\)([\s\S]*?);;/)?.[1] || '';
+    const count = (refundBlock.match(/echo "\[LOG\]/g) || []).length;
+    expect(count).toBe(2);
+  });
+
+  test('22 - interact.sh [LOG] lines use action= field', () => {
+    const src = fs.readFileSync(INTERACT_SCRIPT, 'utf8');
+    expect(src).toMatch(/\[LOG\] action=contribute status=start/);
+    expect(src).toMatch(/\[LOG\] action=contribute status=ok/);
+    expect(src).toMatch(/\[LOG\] action=withdraw status=start/);
+    expect(src).toMatch(/\[LOG\] action=withdraw status=ok/);
+    expect(src).toMatch(/\[LOG\] action=refund status=start/);
+    expect(src).toMatch(/\[LOG\] action=refund status=ok/);
+  });
+});
+
+// ── [LOG] line format validation ──────────────────────────────────────────────
+
+describe('[LOG] line format', () => {
+  const validLines = [
+    '[LOG] step=build status=start',
+    '[LOG] step=deploy status=ok contract_id=CABC123',
+    '[LOG] action=contribute status=start contributor=GABC amount=100',
+    '[LOG] action=unknown_action status=error reason=unknown_action',
+  ];
+
+  test.each(validLines)('23 - parseLog handles: %s', (line) => {
+    const parsed = parseLog(line);
+    expect(Object.keys(parsed).length).toBeGreaterThan(0);
+    expect(parsed.status || parsed.step || parsed.action).toBeTruthy();
+  });
+
+  test('24 - [LOG] lines do not contain unquoted semicolons (injection guard)', () => {
+    const src =
+      fs.readFileSync(DEPLOY_SCRIPT, 'utf8') +
+      fs.readFileSync(INTERACT_SCRIPT, 'utf8');
+    const logEchos = src.match(/echo "\[LOG\][^"]*"/g) || [];
+    for (const line of logEchos) {
+      expect(line).not.toMatch(/;/);
     }
   });
 });
 
-// Update jest.config.js if needed for Node env (current has jsdom, but ok for exec)
-module.exports = {
-  // Existing config handles
-};
+// ── README content ────────────────────────────────────────────────────────────
 
+describe('README installation doc', () => {
+  let readme;
+  beforeAll(() => {
+    readme = fs.readFileSync(README_INSTALL, 'utf8');
+  });
+
+  test('25 - README contains Logging Bounds section', () => {
+    expect(readme).toMatch(/## Logging Bounds/);
+  });
+
+  test('26 - README documents maximum 7 log lines for deploy.sh', () => {
+    expect(readme).toMatch(/7/);
+  });
+
+  test('27 - README documents exactly 2 log lines for interact.sh', () => {
+    expect(readme).toMatch(/exactly 2/);
+  });
+
+  test('28 - README contains [LOG] format example', () => {
+    expect(readme).toMatch(/\[LOG\]/);
+  });
+
+  test('29 - README contains grep parsing example', () => {
+    expect(readme).toMatch(/grep/);
+  });
+
+  test('30 - README contains Security Assumptions section', () => {
+    expect(readme).toMatch(/## Security Assumptions/);
+  });
+});

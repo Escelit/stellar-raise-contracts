@@ -39,8 +39,9 @@ withdraw)
   echo "Contribution of $AMOUNT from $CONTRIBUTOR successful."
   ;;
 withdraw)
-  CREATOR=${3:?missing creator (source account)}
-  soroban contract invoke \
+  CREATOR=${3:?missing creator}
+  echo "[LOG] action=withdraw status=start creator=$CREATOR"
+  stellar contract invoke \
     --id "$CONTRACT_ID" \
     --network "$NETWORK" \
     --source "$CREATOR" \
@@ -55,8 +56,9 @@ refund)
   echo "Withdraw successful."
   ;;
 refund)
-  CALLER=${3:?missing caller (source account)}
-  soroban contract invoke \
+  CALLER=${3:?missing caller}
+  echo "[LOG] action=refund status=start caller=$CALLER"
+  stellar contract invoke \
     --id "$CONTRACT_ID" \
     --network "$NETWORK" \
     --source "$CALLER" \
@@ -71,7 +73,7 @@ refund)
   echo "Refund successful."
   ;;
 *)
-  echo "Unknown action: $ACTION. Use contribute | withdraw | refund"
+  echo "[LOG] action=$ACTION status=error reason=unknown_action"
   exit 1
   ;;
 esac
