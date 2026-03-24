@@ -13,7 +13,14 @@ import {
   ALLOWED_CSS_VARIABLES,
   CssVariablesMap,
   useCssVariable,
-  useDocsCssVariable,
+  THEME,
+  COLORS,
+  SPACING,
+  TYPOGRAPHY,
+  LAYOUT,
+  Z_INDEX,
+  EFFECTS,
+  SAFE_AREA,
 } from './css_variables_usage';
 
 describe('CssVariableValidator', () => {
@@ -451,5 +458,45 @@ describe('ALLOWED_CSS_VARIABLES constant', () => {
     ALLOWED_CSS_VARIABLES.forEach((variable) => {
       expect(variable).toMatch(/^--[a-z][a-z0-9-]*$/);
     });
+  });
+});
+
+describe('THEME object', () => {
+  it('should have all categories defined', () => {
+    expect(THEME.colors).toBeDefined();
+    expect(THEME.spacing).toBeDefined();
+    expect(THEME.typography).toBeDefined();
+    expect(THEME.layout).toBeDefined();
+    expect(THEME.zIndex).toBeDefined();
+    expect(THEME.effects).toBeDefined();
+    expect(THEME.safeArea).toBeDefined();
+  });
+
+  it('should map COLORS to THEME.colors', () => {
+    expect(COLORS).toBe(THEME.colors);
+  });
+
+  it('should map SPACING to THEME.spacing', () => {
+    expect(SPACING).toBe(THEME.spacing);
+  });
+
+  it('should have correct variable names in THEME', () => {
+    expect(THEME.colors.primary).toBe('--color-primary-blue');
+    expect(THEME.spacing.space4).toBe('--space-4');
+    expect(THEME.typography.sizeBase).toBe('--font-size-base');
+    expect(THEME.layout.breakpointMobile).toBe('--breakpoint-mobile');
+    expect(THEME.zIndex.modal).toBe('--z-modal');
+    expect(THEME.effects.radiusFull).toBe('--radius-full');
+    expect(THEME.safeArea.top).toBe('--safe-area-inset-top');
+  });
+
+  it('should include all THEME variables in ALLOWED_CSS_VARIABLES', () => {
+    Object.values(THEME.colors).forEach(v => expect(ALLOWED_CSS_VARIABLES).toContain(v));
+    Object.values(THEME.spacing).forEach(v => expect(ALLOWED_CSS_VARIABLES).toContain(v));
+    Object.values(THEME.typography).forEach(v => expect(ALLOWED_CSS_VARIABLES).toContain(v));
+    Object.values(THEME.layout).forEach(v => expect(ALLOWED_CSS_VARIABLES).toContain(v));
+    Object.values(THEME.zIndex).forEach(v => expect(ALLOWED_CSS_VARIABLES).toContain(v));
+    Object.values(THEME.effects).forEach(v => expect(ALLOWED_CSS_VARIABLES).toContain(v));
+    Object.values(THEME.safeArea).forEach(v => expect(ALLOWED_CSS_VARIABLES).toContain(v));
   });
 });

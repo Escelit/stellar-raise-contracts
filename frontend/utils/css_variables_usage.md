@@ -4,6 +4,27 @@
 
 This document describes the secure CSS variables utility implemented for the Stellar Raise crowdfunding DApp. The utility provides type-safe, validated access to CSS custom properties (CSS variables) to prevent security vulnerabilities.
 
+### The THEME Object
+
+The utility exports a `THEME` object that provides a centralized, type-safe reference for all CSS variables used in the DApp.
+
+```typescript
+import { THEME, COLORS, SPACING } from './css_variables_usage';
+
+// Access variables via the THEME object
+const primaryColor = THEME.colors.primary; // '--color-primary-blue'
+const basePadding = THEME.spacing.space4;  // '--space-4'
+
+// Or use category constants
+const successColor = COLORS.success;
+```
+
+### Security Benefits
+
+1.  **Whitelist Enforcement**: All variables in `THEME` are automatically whitelisted.
+2.  **Code Completion**: IDEs provide autocomplete for all available style tokens.
+3.  **Documentation**: Every variable in `THEME` includes NatSpec comments explaining its intended use.
+
 ## Security Considerations
 
 ### Why Secure CSS Variable Handling?
@@ -29,6 +50,17 @@ CSS variables, while powerful, can be a vector for security vulnerabilities if n
 4. **Fallback Values**: Safe defaults prevent undefined variable issues
 
 ## API Reference
+
+### Constants
+
+- **`THEME`**: The main object containing all design tokens.
+- **`COLORS`**: Shortcut to `THEME.colors`.
+- **`SPACING`**: Shortcut to `THEME.spacing`.
+- **`TYPOGRAPHY`**: Shortcut to `THEME.typography`.
+- **`LAYOUT`**: Shortcut to `THEME.layout`.
+- **`Z_INDEX`**: Shortcut to `THEME.zIndex`.
+- **`EFFECTS`**: Shortcut to `THEME.effects`.
+- **`SAFE_AREA`**: Shortcut to `THEME.safeArea`.
 
 ### Classes
 
@@ -288,18 +320,18 @@ try {
 ### Basic Usage
 
 ```typescript
-import { CssVariablesUsage } from './css_variables_usage';
+import { CssVariablesUsage, THEME } from './css_variables_usage';
 
 const cssVars = new CssVariablesUsage();
 
-// Get a value
-const primaryColor = cssVars.get('--color-primary-blue');
+// Get a value using the THEME object for type safety
+const primaryColor = cssVars.get(THEME.colors.primary);
 
 // Set a value
-cssVars.set('--color-primary-blue', '#ff0000');
+cssVars.set(THEME.colors.primary, '#ff0000');
 
 // Check if defined
-if (cssVars.has('--custom-color')) {
+if (cssVars.has(THEME.colors.primary)) {
   // ...
 }
 ```
@@ -307,10 +339,10 @@ if (cssVars.has('--custom-color')) {
 ### React Integration
 
 ```typescript
-import { useCssVariable } from './css_variables_usage';
+import { useCssVariable, THEME } from './css_variables_usage';
 
 function MyComponent() {
-  const primaryColor = useCssVariable('--color-primary-blue', '#0066FF');
+  const primaryColor = useCssVariable(THEME.colors.primary, '#0066FF');
   
   return (
     <div style={{ color: primaryColor }}>

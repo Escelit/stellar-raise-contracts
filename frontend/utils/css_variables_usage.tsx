@@ -8,110 +8,175 @@
  */
 
 /**
- * @notice Predefined list of allowed CSS variable names
- * @dev Only variables defined in this list can be accessed via the utility
- *      This prevents CSS injection through arbitrary variable names
+ * @notice Design tokens mapped to CSS variables for the Stellar Raise DApp
+ * @dev This object provides a central reference for all standard UI styles
  */
+export const THEME = {
+  colors: {
+    /** @notice Primary brand color used for primary actions and highlights */
+    primary: '--color-primary-blue',
+    /** @notice Deep navy color used for headings and dark backgrounds */
+    navy: '--color-deep-navy',
+    /** @notice Semantic color for success states and positive indicators */
+    success: '--color-success-green',
+    /** @notice Semantic color for error states, destructive actions, and alerts */
+    error: '--color-error-red',
+    /** @notice Semantic color for warning states and cautionary messages */
+    warning: '--color-warning-orange',
+    /** @notice Lightest neutral color, used for backgrounds and text on dark areas */
+    neutral100: '--color-neutral-100',
+    /** @notice Very light neutral color for subtle backgrounds */
+    neutral200: '--color-neutral-200',
+    /** @notice Light neutral color for borders and dividers */
+    neutral300: '--color-neutral-300',
+    /** @notice Medium neutral color for secondary text and icons */
+    neutral700: '--color-neutral-700',
+    /** @notice Darkest neutral color for primary body text */
+    neutral900: '--color-neutral-900',
+  },
+  spacing: {
+    /** @notice 4px spacing unit */
+    space1: '--space-1',
+    /** @notice 8px spacing unit */
+    space2: '--space-2',
+    /** @notice 12px spacing unit */
+    space3: '--space-3',
+    /** @notice 16px spacing unit - Standard base padding/margin */
+    space4: '--space-4',
+    /** @notice 20px spacing unit */
+    space5: '--space-5',
+    /** @notice 24px spacing unit */
+    space6: '--space-6',
+    /** @notice 32px spacing unit */
+    space8: '--space-8',
+    /** @notice 40px spacing unit */
+    space10: '--space-10',
+    /** @notice 48px spacing unit */
+    space12: '--space-12',
+    /** @notice 64px spacing unit */
+    space16: '--space-16',
+  },
+  typography: {
+    /** @notice Main brand font family (Space Grotesk) */
+    familyPrimary: '--font-family-primary',
+    /** @notice Extra small font size (approx 12px) */
+    sizeXs: '--font-size-xs',
+    /** @notice Small font size (approx 14px) */
+    sizeSm: '--font-size-sm',
+    /** @notice Base font size (approx 16px) */
+    sizeBase: '--font-size-base',
+    /** @notice Large font size (approx 18px-24px) */
+    sizeLg: '--font-size-lg',
+    /** @notice Extra large font size (approx 20px-30px) */
+    sizeXl: '--font-size-xl',
+    /** @notice 2x large font size (approx 24px-36px) */
+    size2xl: '--font-size-2xl',
+    /** @notice 3x large font size (approx 30px-48px) */
+    size3xl: '--font-size-3xl',
+  },
+  layout: {
+    /** @notice Mobile breakpoint (768px) */
+    breakpointMobile: '--breakpoint-mobile',
+    /** @notice Tablet breakpoint (1024px) */
+    breakpointTablet: '--breakpoint-tablet',
+    /** @notice Minimum touch target size for accessibility (44px) */
+    touchTargetMin: '--touch-target-min',
+    /** @notice Mobile grid column count (4) */
+    gridColumnsMobile: '--grid-columns-mobile',
+    /** @notice Tablet grid column count (8) */
+    gridColumnsTablet: '--grid-columns-tablet',
+    /** @notice Desktop grid column count (12) */
+    gridColumnsDesktop: '--grid-columns-desktop',
+    /** @notice Mobile grid gutter size */
+    gridGutterMobile: '--grid-gutter-mobile',
+    /** @notice Tablet grid gutter size */
+    gridGutterTablet: '--grid-gutter-tablet',
+    /** @notice Desktop grid gutter size */
+    gridGutterDesktop: '--grid-gutter-desktop',
+    /** @notice Mobile container max width */
+    containerMobile: '--container-mobile',
+    /** @notice Tablet container max width */
+    containerTablet: '--container-tablet',
+    /** @notice Desktop container max width */
+    containerDesktop: '--container-desktop',
+  },
+  zIndex: {
+    /** @notice Base z-index layer (1) */
+    base: '--z-base',
+    /** @notice Dropdown menus and popovers (100) */
+    dropdown: '--z-dropdown',
+    /** @notice Sticky elements like headers (200) */
+    sticky: '--z-sticky',
+    /** @notice Fixed position elements (300) */
+    fixed: '--z-fixed',
+    /** @notice Backdrop for modals (400) */
+    modalBackdrop: '--z-modal-backdrop',
+    /** @notice Modal content (500) */
+    modal: '--z-modal',
+    /** @notice Toast notifications and alerts (600) */
+    toast: '--z-toast',
+  },
+  effects: {
+    /** @notice Fast transition duration (150ms) */
+    transitionFast: '--transition-fast',
+    /** @notice Standard base transition duration (250ms) */
+    transitionBase: '--transition-base',
+    /** @notice Slow transition duration (350ms) */
+    transitionSlow: '--transition-slow',
+    /** @notice Small border radius (4px) */
+    radiusSm: '--radius-sm',
+    /** @notice Medium border radius (8px) */
+    radiusMd: '--radius-md',
+    /** @notice Large border radius (12px) */
+    radiusLg: '--radius-lg',
+    /** @notice Extra large border radius (16px) */
+    radiusXl: '--radius-xl',
+    /** @notice Fully rounded radius for circles/pills */
+    radiusFull: '--radius-full',
+    /** @notice Small elevation shadow */
+    shadowSm: '--shadow-sm',
+    /** @notice Medium elevation shadow */
+    shadowMd: '--shadow-md',
+    /** @notice Large elevation shadow */
+    shadowLg: '--shadow-lg',
+    /** @notice Extra large elevation shadow */
+    shadowXl: '--shadow-xl',
+  },
+  safeArea: {
+    /** @notice Top safe area inset for notched devices */
+    top: '--safe-area-inset-top',
+    /** @notice Right safe area inset for notched devices */
+    right: '--safe-area-inset-right',
+    /** @notice Bottom safe area inset for notched devices */
+    bottom: '--safe-area-inset-bottom',
+    /** @notice Left safe area inset for notched devices */
+    left: '--safe-area-inset-left',
+  },
+} as const;
+
+/**
+ * @notice Individual constants for grouped theme categories
+ */
+export const COLORS = THEME.colors;
+export const SPACING = THEME.spacing;
+export const TYPOGRAPHY = THEME.typography;
+export const LAYOUT = THEME.layout;
+export const Z_INDEX = THEME.zIndex;
+export const EFFECTS = THEME.effects;
+export const SAFE_AREA = THEME.safeArea;
+
 /**
  * @notice Predefined list of allowed CSS variable names
- * @dev Only variables defined in this list can be accessed via the utility
- *      This prevents CSS injection through arbitrary variable names
+ * @dev Derived from the THEME object to ensure single source of truth
  */
 export const ALLOWED_CSS_VARIABLES = [
-  // Breakpoints
-  '--breakpoint-mobile',
-  '--breakpoint-tablet',
-
-  // Brand Colors
-  '--color-primary-blue',
-  '--color-deep-navy',
-  '--color-success-green',
-  '--color-error-red',
-  '--color-warning-orange',
-  '--color-neutral-100',
-  '--color-neutral-200',
-  '--color-neutral-300',
-  '--color-neutral-700',
-  '--color-neutral-900',
-
-  // Typography
-  '--font-family-primary',
-  '--font-size-xs',
-  '--font-size-sm',
-  '--font-size-base',
-  '--font-size-lg',
-  '--font-size-xl',
-  '--font-size-2xl',
-  '--font-size-3xl',
-
-  // Spacing
-  '--space-1',
-  '--space-2',
-  '--space-3',
-  '--space-4',
-  '--space-5',
-  '--space-6',
-  '--space-8',
-  '--space-10',
-  '--space-12',
-  '--space-16',
-
-  // Touch Targets
-  '--touch-target-min',
-
-  // Grid System
-  '--grid-columns-mobile',
-  '--grid-columns-tablet',
-  '--grid-columns-desktop',
-  '--grid-gutter-mobile',
-  '--grid-gutter-tablet',
-  '--grid-gutter-desktop',
-
-  // Container
-  '--container-mobile',
-  '--container-tablet',
-  '--container-desktop',
-
-  // Z-index Scale
-  '--z-base',
-  '--z-dropdown',
-  '--z-sticky',
-  '--z-fixed',
-  '--z-modal-backdrop',
-  '--z-modal',
-  '--z-toast',
-
-  // Transitions
-  '--transition-fast',
-  '--transition-base',
-  '--transition-slow',
-
-  // Border Radius
-  '--radius-sm',
-  '--radius-md',
-  '--radius-lg',
-  '--radius-xl',
-  '--radius-full',
-
-  // Shadows
-  '--shadow-sm',
-  '--shadow-md',
-  '--shadow-lg',
-  '--shadow-xl',
-
-  // Safe Area Insets
-  '--safe-area-inset-top',
-  '--safe-area-inset-right',
-  '--safe-area-inset-bottom',
-  '--safe-area-inset-left',
-
-  // Documentation
-  '--color-docs-bg',
-  '--color-docs-text',
-  '--color-docs-link',
-  '--color-docs-accent',
-  '--font-docs-code',
-  '--space-docs-content',
+  ...Object.values(THEME.colors),
+  ...Object.values(THEME.spacing),
+  ...Object.values(THEME.typography),
+  ...Object.values(THEME.layout),
+  ...Object.values(THEME.zIndex),
+  ...Object.values(THEME.effects),
+  ...Object.values(THEME.safeArea),
 ] as const;
 
 /**
