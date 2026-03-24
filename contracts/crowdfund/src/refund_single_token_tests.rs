@@ -20,6 +20,7 @@
 use soroban_sdk::{
     testutils::{Address as _, Ledger},
     token, Address, Env, IntoVal,
+    token, Address, Env,
 };
 
 use crate::{ContractError, CrowdfundContract, CrowdfundContractClient, PlatformConfig};
@@ -33,6 +34,7 @@ fn setup() -> (
     Address,
     Address,
 ) {
+fn setup() -> (Env, CrowdfundContractClient<'static>, Address, Address, Address) {
     let env = Env::default();
     env.mock_all_auths();
 
@@ -64,6 +66,12 @@ fn init(
 ) {
     client.initialize(
         creator, creator, token, &goal, &deadline, &1_000, &None, &None, &None,
+        creator,
+        creator,
+        token,
+        &goal,
+        &deadline,
+        &1_000,
         &None,
         &None,
         &None,
@@ -74,6 +82,8 @@ fn init(
 
 /// A single contributor can claim their full refund after the campaign
 /// has been finalized as Expired (deadline passed, goal not met).
+/// A single contributor can claim their full refund after the deadline
+/// when the goal was not met.
 #[test]
 fn test_refund_single_basic() {
     let (env, client, creator, token, _admin) = setup();
@@ -193,6 +203,13 @@ fn test_refund_single_double_claim_returns_nothing_to_refund() {
 
     let result = client.try_refund_single(&alice);
     assert_eq!(result.unwrap_err().unwrap(), ContractError::NothingToRefund);
+    client.refund_single(&alice);
+
+    let result = client.try_refund_single(&alice);
+    assert_eq!(
+        result.unwrap_err().unwrap(),
+        ContractError::NothingToRefund
+    );
 }
 
 // ── Zero-contribution guard ───────────────────────────────────────────────────
@@ -210,6 +227,12 @@ fn test_refund_single_no_contribution_returns_nothing_to_refund() {
 
     let result = client.try_refund_single(&stranger);
     assert_eq!(result.unwrap_err().unwrap(), ContractError::NothingToRefund);
+
+    let result = client.try_refund_single(&stranger);
+    assert_eq!(
+        result.unwrap_err().unwrap(),
+        ContractError::NothingToRefund
+    );
 }
 
 // ── Deadline guard ────────────────────────────────────────────────────────────
@@ -217,6 +240,8 @@ fn test_refund_single_no_contribution_returns_nothing_to_refund() {
 /// Calling `refund_single` before finalize (campaign still Active) panics.
 #[test]
 #[should_panic(expected = "campaign must be in Expired state to refund")]
+/// Calling `refund_single` before the deadline returns `CampaignStillActive`.
+#[test]
 fn test_refund_single_before_deadline_returns_campaign_still_active() {
     let (env, client, creator, token, _admin) = setup();
     let deadline = env.ledger().timestamp() + 3_600;
@@ -233,6 +258,16 @@ fn test_refund_single_before_deadline_returns_campaign_still_active() {
 /// Calling exactly at the deadline (not past it) — campaign still Active, panics.
 #[test]
 #[should_panic(expected = "campaign must be in Expired state to refund")]
+    // Do NOT advance time past deadline.
+    let result = client.try_refund_single(&alice);
+    assert_eq!(
+        result.unwrap_err().unwrap(),
+        ContractError::CampaignStillActive
+    );
+}
+
+/// Calling exactly at the deadline (not past it) is still rejected.
+#[test]
 fn test_refund_single_at_deadline_boundary_returns_campaign_still_active() {
     let (env, client, creator, token, _admin) = setup();
     let deadline = env.ledger().timestamp() + 3_600;
@@ -245,6 +280,11 @@ fn test_refund_single_at_deadline_boundary_returns_campaign_still_active() {
     env.ledger().set_timestamp(deadline); // exactly at deadline, not past
     // finalize() would return CampaignStillActive here; campaign stays Active
     client.refund_single(&alice); // panics — still Active
+    let result = client.try_refund_single(&alice);
+    assert_eq!(
+        result.unwrap_err().unwrap(),
+        ContractError::CampaignStillActive
+    );
 }
 
 // ── Goal-reached guard ────────────────────────────────────────────────────────
@@ -252,6 +292,8 @@ fn test_refund_single_at_deadline_boundary_returns_campaign_still_active() {
 /// When the goal is met, finalize() transitions to Succeeded; refund_single panics.
 #[test]
 #[should_panic(expected = "campaign must be in Expired state to refund")]
+/// When the goal is met, `refund_single` returns `GoalReached`.
+#[test]
 fn test_refund_single_goal_reached_returns_goal_reached() {
     let (env, client, creator, token, _admin) = setup();
     let deadline = env.ledger().timestamp() + 3_600;
@@ -265,6 +307,11 @@ fn test_refund_single_goal_reached_returns_goal_reached() {
     env.ledger().set_timestamp(deadline + 1);
     client.finalize(); // Active → Succeeded
     client.refund_single(&alice); // panics — not Expired
+    let result = client.try_refund_single(&alice);
+    assert_eq!(
+        result.unwrap_err().unwrap(),
+        ContractError::GoalReached
+    );
 }
 
 /// Goal exactly met (not exceeded) still blocks refunds.
@@ -283,6 +330,11 @@ fn test_refund_single_goal_exactly_met_returns_goal_reached() {
     env.ledger().set_timestamp(deadline + 1);
     client.finalize(); // Active → Succeeded
     client.refund_single(&alice); // panics — not Expired
+    let result = client.try_refund_single(&alice);
+    assert_eq!(
+        result.unwrap_err().unwrap(),
+        ContractError::GoalReached
+    );
 }
 
 // ── Campaign status guards ────────────────────────────────────────────────────
@@ -290,6 +342,9 @@ fn test_refund_single_goal_exactly_met_returns_goal_reached() {
 /// `refund_single` panics when the campaign is Succeeded.
 #[test]
 #[should_panic(expected = "campaign must be in Expired state to refund")]
+/// `refund_single` panics when the campaign is Successful.
+#[test]
+#[should_panic(expected = "campaign is not active")]
 fn test_refund_single_on_successful_campaign_panics() {
     let (env, client, creator, token, _admin) = setup();
     let deadline = env.ledger().timestamp() + 3_600;
@@ -303,6 +358,7 @@ fn test_refund_single_on_successful_campaign_panics() {
     env.ledger().set_timestamp(deadline + 1);
     client.finalize(); // Active → Succeeded
     client.withdraw();
+    client.withdraw(); // sets status → Successful
 
     client.refund_single(&alice); // must panic
 }
@@ -310,6 +366,7 @@ fn test_refund_single_on_successful_campaign_panics() {
 /// `refund_single` panics when the campaign is Cancelled.
 #[test]
 #[should_panic(expected = "campaign must be in Expired state to refund")]
+#[should_panic(expected = "campaign is not active")]
 fn test_refund_single_on_cancelled_campaign_panics() {
     let (env, client, creator, token, _admin) = setup();
     let deadline = env.ledger().timestamp() + 3_600;
@@ -367,6 +424,9 @@ fn test_refund_single_requires_contributor_auth() {
     client.contribute(&alice, &500_000);
     env.ledger().set_timestamp(deadline + 1);
     client.finalize(); // Active → Expired
+    );
+    client.contribute(&alice, &500_000);
+    env.ledger().set_timestamp(deadline + 1);
 
     // Now attempt refund_single with alice's auth properly mocked.
     client.mock_auths(&[soroban_sdk::testutils::MockAuth {
@@ -375,6 +435,7 @@ fn test_refund_single_requires_contributor_auth() {
             contract: &contract_id,
             fn_name: "refund_single",
             args: soroban_sdk::vec![&env, alice.clone().into_val(&env)],
+            args: soroban_sdk::vec![&env, alice.clone().into()],
             sub_invokes: &[],
         },
     }]);
@@ -409,6 +470,12 @@ fn test_refund_single_after_batch_refund_returns_nothing_to_refund() {
     // refund_single should now return NothingToRefund (amount is 0)
     let result = client.try_refund_single(&alice);
     assert_eq!(result.unwrap_err().unwrap(), ContractError::NothingToRefund);
+    // refund_single should now return NothingToRefund (status is Refunded, amount is 0)
+    let result = client.try_refund_single(&alice);
+    assert_eq!(
+        result.unwrap_err().unwrap(),
+        ContractError::NothingToRefund
+    );
 }
 
 // ── Platform fee does not affect refund_single ────────────────────────────────
