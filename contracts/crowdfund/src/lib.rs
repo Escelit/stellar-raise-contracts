@@ -1152,8 +1152,7 @@ impl CrowdfundContract {
         if !contributors.contains(&contributor) {
         if is_new_contributor {
             // Enforce contributor list size limit before appending.
-            contract_state_size::check_contributor_limit(&env)
-                .expect("contributor limit exceeded");
+            contract_state_size::check_contributor_limit(&env).expect("contributor limit exceeded");
             contributors.push_back(contributor.clone());
             env.storage()
                 .persistent()
@@ -1333,8 +1332,7 @@ impl CrowdfundContract {
             .unwrap_or_else(|| Vec::new(&env));
         if !pledgers.contains(&pledger) {
             // Enforce pledger list size limit before appending.
-            contract_state_size::check_pledger_limit(&env)
-                .expect("pledger limit exceeded");
+            contract_state_size::check_pledger_limit(&env).expect("pledger limit exceeded");
             pledgers.push_back(pledger.clone());
             env.storage()
                 .persistent()

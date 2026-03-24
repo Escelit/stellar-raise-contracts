@@ -148,6 +148,8 @@ fn setup() -> (Env, SorobanSdkMinorClient<'static>) {
 
 // ── init ──────────────────────────────────────────────────────────────────────
 
+// ── init ──────────────────────────────────────────────────────────────────────
+
 /// Happy path: init stores the admin and get_admin returns it.
 #[test]
 fn test_init_stores_admin() {
@@ -175,7 +177,7 @@ fn test_init_different_admins() {
 
 /// check_auth returns true when auth is mocked.
 #[test]
-fn test_check_auth_returns_true() {
+fn test_check_auth_returns_true_via_mock() {
     let (env, client) = setup();
     let user = Address::generate(&env);
 
