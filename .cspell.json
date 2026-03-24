@@ -1,0 +1,24 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "words": [
+    "NatSpec",
+    "jsdom",
+    "cssVars",
+    "Phantomcall",
+    "Stellar",
+    "DApp",
+    "frontend",
+    "tsx",
+    "useCssVariable",
+    "Stellar-Raise"
+  ],
+  "ignorePaths": [
+    "node_modules/**",
+    "coverage/**",
+    "**/*.log",
+    "pnpm-lock.yaml",
+    "package-lock.json",
+    "gh_2.45.0_linux_amd64/**"
+  ]
+}
