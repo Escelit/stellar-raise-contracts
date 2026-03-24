@@ -17,6 +17,7 @@
 #   1 — one or more checks failed
 
 set +e   # Do NOT exit on first failure — accumulate all results below.
+set -e
 
 PASS=0
 FAIL=1

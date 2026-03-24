@@ -16,6 +16,10 @@
 | Stellar CLI | ≥ 20.0.0 | Renamed from `soroban` in v20 |
 | Node.js | ≥ 18 | Required for frontend UI and JS tests |
 | npm | ≥ 9 | Bundled with Node 18+ |
+| Disk | 2 GB free | Rust toolchain + WASM target |
+| Rust | stable (≥ 1.74) | `rustup update stable` |
+| Stellar CLI | ≥ 20.0.0 | Renamed from `soroban` in v20 |
+| Node.js | ≥ 18 | For frontend and JS tests |
 
 ---
 

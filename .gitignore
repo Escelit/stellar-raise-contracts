@@ -20,6 +20,8 @@ Thumbs.db
 *.d
 *.wasm
 !contracts/factory/wasm/crowdfund.wasm
+.kiro/
+.soroban/
 
 # Kiro (local settings only, specs are tracked)
 .kiro/settings/
