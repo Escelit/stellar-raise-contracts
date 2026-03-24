@@ -9,6 +9,9 @@ use soroban_sdk::{
 
 #[cfg(test)]
 mod auth_tests;
+pub mod contribute_error_handling;
+#[cfg(test)]
+mod contribute_error_handling_tests;
 #[cfg(test)]
 mod proptest_generator_boundary;
 #[cfg(test)]

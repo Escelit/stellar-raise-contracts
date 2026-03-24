@@ -3,15 +3,13 @@
 //! Ensures boundary constants and validators behave correctly for frontend UI
 //! display and property-based test stability.
 
-#![cfg(test)]
-
 use proptest::prelude::*;
 use proptest::strategy::Just;
 
 use crate::proptest_generator_boundary::{
-    clamp_progress_bps, is_valid_contribution_amount, is_valid_deadline_offset,
-    is_valid_goal, is_valid_min_contribution, DEADLINE_OFFSET_MAX, DEADLINE_OFFSET_MIN,
-    FEE_BPS_CAP, GOAL_MAX, GOAL_MIN, MIN_CONTRIBUTION_FLOOR, PROGRESS_BPS_CAP,
+    clamp_progress_bps, is_valid_contribution_amount, is_valid_deadline_offset, is_valid_goal,
+    is_valid_min_contribution, DEADLINE_OFFSET_MAX, DEADLINE_OFFSET_MIN, FEE_BPS_CAP, GOAL_MAX,
+    GOAL_MIN, MIN_CONTRIBUTION_FLOOR, PROGRESS_BPS_CAP,
 };
 
 // ── Strategy definitions ─────────────────────────────────────────────────────
@@ -24,6 +22,7 @@ fn valid_goal_strategy() -> impl Strategy<Value = i128> {
     GOAL_MIN..=GOAL_MAX
 }
 
+#[allow(dead_code)]
 fn valid_min_contribution_strategy(goal: i128) -> impl Strategy<Value = i128> {
     MIN_CONTRIBUTION_FLOOR..=goal
 }
