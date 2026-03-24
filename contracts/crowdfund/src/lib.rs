@@ -17,6 +17,7 @@ use soroban_sdk::{
 };
 use soroban_sdk::{contract, contractimpl, contracterror, contracttype, token, Address, Env, String, Symbol, Vec};
 mod refund_single_token;
+pub mod refund_single_token;
 use refund_single_token::refund_single_transfer;
 
 pub mod access_control;
@@ -142,6 +143,9 @@ pub mod refund_single_token;
 #[cfg(test)]
 mod refund_single_token_test;
 mod refund_single_token_tests;
+mod refund_single_token_tests;
+#[cfg(test)]
+mod test;
 mod refund_single_token_tests;
 #[cfg(test)]
 mod test;
@@ -1759,6 +1763,9 @@ impl CrowdfundContract {
                     token_id += 1;
                     minted += 1;
                 }
+                    token_id += 1;
+                    minted += 1;
+                }
             }
             // Single summary event instead of one event per contributor.
             if minted > 0 {
@@ -2009,7 +2016,7 @@ impl CrowdfundContract {
         Ok(())
     }
 
-    /// Refund a single contributor after campaign failure.
+    /// Claim a refund for a single contributor (pull-based).
     ///
     /// @notice Transfers the full stored contribution from contract to contributor.
     /// @dev The transfer direction is explicitly contract -> contributor to prevent
@@ -2036,6 +2043,14 @@ impl CrowdfundContract {
     pub fn refund_single(env: Env, contributor: Address) -> Result<(), ContractError> {
         contributor.require_auth();
 
+    /// # Errors
+    /// * [`ContractError::CampaignStillActive`] when deadline has not passed.
+    /// * [`ContractError::GoalReached`] when the funding goal was met.
+    /// * [`ContractError::NothingToRefund`] when the contributor has no balance.
+    pub fn refund_single(env: Env, contributor: Address) -> Result<(), ContractError> {
+        contributor.require_auth();
+
+        // A successful or cancelled campaign cannot be refunded.
         let status: Status = env.storage().instance().get(&DataKey::Status).unwrap();
         if status == Status::Successful || status == Status::Cancelled {
             panic!("campaign is not active");
@@ -2063,13 +2078,21 @@ impl CrowdfundContract {
             .persistent()
             .get(&contribution_key)
             .unwrap_or(0);
-
         if amount == 0 {
             return Err(ContractError::NothingToRefund);
         }
 
         // ── Checks-Effects-Interactions ──────────────────────────────────────
         // Zero the record first to prevent any re-entrancy / double-claim.
+        let token_address: Address = env.storage().instance().get(&DataKey::Token).unwrap();
+        let token_client = token::Client::new(&env, &token_address);
+        refund_single_transfer(
+            &token_client,
+            &env.current_contract_address(),
+            &contributor,
+            amount,
+        );
+
         env.storage().persistent().set(&contribution_key, &0i128);
         env.storage()
             .persistent()

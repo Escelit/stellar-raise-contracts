@@ -150,6 +150,10 @@ fn test_init_stores_admin() {
     let (env, client) = setup();
     let admin = Address::generate(&env);
     client.init(&admin);
+
+    // Test initialization
+    client.init(&admin);
+
     assert_eq!(client.get_admin(), admin);
 }
 
@@ -178,6 +182,8 @@ fn test_check_auth() {
 fn test_check_auth_returns_true() {
     let (env, client) = setup();
     let user = Address::generate(&env);
+
+    // In tests, require_auth is satisfied automatically unless specific auth mocks are used.
     assert!(client.check_auth(&user));
 }
 
