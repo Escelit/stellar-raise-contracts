@@ -362,7 +362,7 @@ fn test_refund_single_requires_contributor_auth() {
         invoke: &soroban_sdk::testutils::MockAuthInvoke {
             contract: &contract_id,
             fn_name: "refund_single",
-            args: soroban_sdk::vec![&env, alice.clone().into()],
+            args: soroban_sdk::vec![&env, soroban_sdk::IntoVal::into_val(&alice, &env)],
             sub_invokes: &[],
         },
     }]);

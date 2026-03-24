@@ -312,7 +312,7 @@ pub struct RoadmapItem {
 
 ## Test Coverage
 
-Tests live in `contracts/crowdfund/src/test.rs` (functional) and `contracts/crowdfund/src/auth_tests.rs` (authorization).
+Tests live in `contracts/crowdfund/src/test.rs` (functional), `contracts/crowdfund/src/auth_tests.rs` (authorization), and `contracts/crowdfund/src/stellar_token_minter_test.rs` (minter-focused edge cases).
 
 | Area | Tests |
 |---|---|
@@ -325,10 +325,11 @@ Tests live in `contracts/crowdfund/src/test.rs` (functional) and `contracts/crow
 | pledge | records amount, after deadline error |
 | collect_pledges | before deadline error, goal not met error |
 | stretch goals | current milestone, no goals |
-| bonus goal | reached after contribution, progress bps |
-| get_stats | accurate aggregates |
+| bonus goal | reached after contribution, progress bps capped at 10,000 |
+| get_stats | accurate aggregates, empty campaign |
 | roadmap | add and retrieve items |
 | auth | initialize, withdraw, contribute auth guards |
+| upgrade | admin-only auth guard (non-admin panics) |
 
 Run with:
 
