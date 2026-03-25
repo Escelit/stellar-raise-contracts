@@ -138,6 +138,8 @@ fn setup_with_nft(
         &goal,
         &(contributor_count as i128 * 100), // goal = exactly what contributors will raise
         &(contributor_count as i128 * 100),
+            &None,
+        &(contributor_count as i128 * 100), // goal = exactly what contributors will raise
         &deadline,
         &1,
         &None,
@@ -869,6 +871,7 @@ fn test_withdraw_no_batch_event_without_nft_contract() {
         &None,
         &None,
         &None,
+        &None,
     );
 
     let contributor = Address::generate(&env);
@@ -1040,7 +1043,7 @@ fn test_withdraw_emits_withdrawn_event_once() {
     client.finalize();
     client.withdraw();
 
-    assert_eq!(count_events_with_topic(&env, "campaign", "withdrawn"), 1);
+    assert_eq!(count_events_with_topic(&env, "campaign", "funds_withdrawn"), 1);
 }
 
 /// `withdrawn` event is emitted even when no NFT contract is set.

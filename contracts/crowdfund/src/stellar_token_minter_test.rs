@@ -229,6 +229,7 @@ fn init_campaign(
         &None,
         &None,
         &None,
+        &None,
     );
 }
 
@@ -1026,6 +1027,20 @@ fn test_collect_pledges_before_deadline_returns_error() {
     assert_eq!(
         result.unwrap_err().unwrap(),
         ContractError::CampaignStillActive
+fn test_bonus_goal_progress_bps_capped_at_100_percent() {
+    let (env, client, creator, token_address, admin, _contract_id) = setup_env_simple();
+    let deadline = env.ledger().timestamp() + 3600;
+    client.initialize(
+        &creator,
+        &creator,
+        &token_address,
+        &1_000_000,
+        &deadline,
+        &1_000,
+        &None,
+        &Some(2_000_000i128),
+        &None,
+        &None,
     );
     let _ = token_admin;
 }

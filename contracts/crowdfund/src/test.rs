@@ -240,6 +240,7 @@ fn default_init(
         &None,
         &None,
         &None,
+        &None,
     );
     client.initialize(&creator, &token_address, &goal, &deadline, &min_contribution, &None);
     admin
@@ -822,6 +823,7 @@ fn test_initialize_twice_returns_error() {
         &None,
         &None,
         &None,
+        &None,
     );
     assert_eq!(
         result.unwrap_err().unwrap(),
@@ -846,6 +848,7 @@ fn test_initialize_with_bonus_goal() {
         &None,
         &Some(2_000_000i128),
         &Some(desc.clone()),
+        &None,
     );
 
     assert_eq!(client.bonus_goal(), Some(2_000_000));
@@ -870,6 +873,7 @@ fn test_initialize_platform_fee_over_100_panics() {
         &1_000_000,
         &deadline,
         &1_000,
+            &None,
         &Some(bad_config),
         &None,
         &None,
@@ -894,6 +898,7 @@ fn test_initialize_bonus_goal_not_greater_panics() {
         &1_000,
         &None,
         &Some(500_000i128), // less than goal
+        &None,
         &None,
     );
     assert_eq!(
@@ -1423,6 +1428,7 @@ fn test_withdraw_with_platform_fee() {
         &goal,
         &deadline,
         &1_000,
+            &None,
         &Some(config),
         &None,
         &None,
@@ -2586,6 +2592,7 @@ fn test_cancel_by_non_creator_panics() {
         &None,
         &None,
         &None,
+        &None,
     );
     client.initialize(&creator, &token_address, &goal, &deadline, &min_contribution, &None);
 
@@ -2806,6 +2813,7 @@ fn test_bonus_goal_reached_after_contribution() {
         &1_000,
         &None,
         &Some(2_000_000i128),
+        &None,
         &None,
     );
 
@@ -9198,10 +9206,40 @@ fn test_add_roadmap_item() {
 /// token_decimals() returns the decimal precision stored at initialize time.
 #[test]
 fn test_token_decimals_stored_on_initialize() {
+// ── event emission ────────────────────────────────────────────────────────────
+
+/// metadata_uri is stored and returned when provided at initialize.
+#[test]
+fn test_metadata_uri_stored_on_initialize() {
+    let (env, client, creator, token_address, _admin) = setup_env();
+    let deadline = env.ledger().timestamp() + 3600;
+    let uri = String::from_str(&env, "ipfs://QmExampleHash");
+
+    let admin = creator.clone();
+    client.initialize(
+        &admin,
+        &creator,
+        &token_address,
+        &1_000_000,
+        &deadline,
+        &1_000,
+        &None,
+        &None,
+        &None,
+        &Some(uri.clone()),
+    );
+
+    assert_eq!(client.metadata_uri(), Some(uri));
+}
+
+/// metadata_uri returns None when not provided at initialize.
+#[test]
+fn test_metadata_uri_none_when_not_provided() {
     let (env, client, creator, token_address, _admin) = setup_env();
     let deadline = env.ledger().timestamp() + 3600;
     default_init(&client, &creator, &token_address, deadline);
 
     // Stellar asset contracts report 7 decimals (stroops).
     assert_eq!(client.token_decimals(), 7u32);
+    assert_eq!(client.metadata_uri(), None);
 }

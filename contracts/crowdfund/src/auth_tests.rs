@@ -55,6 +55,7 @@ fn test_initialize_requires_creator_auth() {
         &None,
         &None,
         &None,
+        &None,
     );
 
     assert_eq!(client.goal(), 1_000_000);
@@ -100,6 +101,7 @@ fn test_withdraw_only_creator_can_withdraw() {
         &None,
         &min_contribution,
         &None,
+        &None,
     );
 
     let contributor = Address::generate(&env);
@@ -139,6 +141,7 @@ fn test_contribute_requires_own_auth() {
         &(goal * 2),
         &deadline,
         &1_000,
+        &None,
         &None,
         &None,
         &None,

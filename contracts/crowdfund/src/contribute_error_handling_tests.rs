@@ -89,6 +89,7 @@ fn setup() -> (Env, CrowdfundContractClient<'static>, Address, Address) {
         &None,
         &None,
         &None,
+        &None,
     );
 
     (env, client, contributor)

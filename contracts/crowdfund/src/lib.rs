@@ -534,6 +534,8 @@ use soroban_sdk::contracterror;
     NFTContract,
     /// Decimal precision of the campaign token (e.g. 7 for XLM, 6 for USDC).
     TokenDecimals,
+    /// Optional IPFS URI linking to campaign description, images, and social proof.
+    MetadataUri,
 }
 
 // ── Contract Error ──────────────────────────────────────────────────────────
@@ -774,6 +776,7 @@ impl CrowdfundContract {
         bonus_goal: Option<i128>,
         bonus_goal_description: Option<String>,
         hard_cap: Option<i128>,
+        metadata_uri: Option<String>,
     ) -> Result<(), ContractError> {
         execute_initialize(
             &env,
@@ -985,6 +988,17 @@ impl CrowdfundContract {
             &platform_config,
             bonus_goal,
             &bonus_goal_description,
+        );
+
+        // Store optional IPFS metadata URI.
+        if let Some(ref uri) = metadata_uri {
+            env.storage().instance().set(&DataKey::MetadataUri, uri);
+        }
+
+        // Emit CampaignCreated event for off-chain indexers.
+        env.events().publish(
+            ("campaign", "campaign_created"),
+            (creator.clone(), token.clone(), goal, deadline, metadata_uri),
         );
 
         Ok(())
@@ -1506,6 +1520,11 @@ impl CrowdfundContract {
         env.storage()
             .persistent()
             .extend_ttl(&last_time_key, 100, 100);
+        // Emit PledgeReceived event — includes total_raised for real-time progress bars.
+        env.events().publish(
+            ("campaign", "pledge_received"),
+            (contributor, amount, new_total),
+        );
 
         Ok(())
     }
@@ -2156,6 +2175,11 @@ impl CrowdfundContract {
 
         // Single withdrawal event carrying payout, fee info, and mint count.
         emit_withdrawal_event(&env, &creator, creator_payout, nft_minted_count);
+        // Emit FundsWithdrawn event for off-chain indexers.
+        env.events().publish(
+            ("campaign", "funds_withdrawn"),
+            (creator.clone(), creator_payout, nft_minted_count),
+        );
 
         Ok(())
     }
@@ -3688,6 +3712,9 @@ impl CrowdfundContract {
             .instance()
             .get(&DataKey::TokenDecimals)
             .unwrap()
+    /// Returns the IPFS metadata URI set at initialization, if any.
+    pub fn metadata_uri(env: Env) -> Option<String> {
+        env.storage().instance().get(&DataKey::MetadataUri)
     }
 
     /// Returns the configured NFT contract address, if any.
