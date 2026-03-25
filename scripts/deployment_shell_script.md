@@ -40,9 +40,35 @@ actionable message. This script adds:
 | `DEFAULT_MIN_CONTRIBUTION`| `1`                                            | Default minimum pledge (stroops) |
 
 - Per-step exit codes (2–5) so CI can distinguish build vs deploy vs init failures.
+- Named `readonly` constants for all exit codes, RPC URLs, WASM paths, and
+  defaults — eliminating magic numbers and making CI step-failure checks
+  unambiguous.
+- Per-step exit codes (`EXIT_MISSING_DEP`…`EXIT_NETWORK_FAIL`) so CI can
+  distinguish build vs deploy vs init failures.
 - All stderr captured to `DEPLOY_LOG` (default `deploy_errors.log`) alongside
   timestamped stdout entries.
 - Argument validation with clear messages before any network call is made.
+
+## Constants reference
+
+| Constant                  | Value                                          | Purpose                          |
+| :------------------------ | :--------------------------------------------- | :------------------------------- |
+| `EXIT_OK`                 | `0`                                            | Success                          |
+| `EXIT_MISSING_DEP`        | `1`                                            | Missing CLI dependency           |
+| `EXIT_BAD_ARG`            | `2`                                            | Invalid / missing argument       |
+| `EXIT_BUILD_FAIL`         | `3`                                            | `cargo build` failure            |
+| `EXIT_DEPLOY_FAIL`        | `4`                                            | `stellar contract deploy` failure|
+| `EXIT_INIT_FAIL`          | `5`                                            | `stellar contract invoke` failure|
+| `EXIT_NETWORK_FAIL`       | `6`                                            | RPC connectivity failure         |
+| `WASM_TARGET`             | `wasm32-unknown-unknown`                       | Rust compilation target          |
+| `WASM_PATH`               | `target/wasm32-unknown-unknown/release/crowdfund.wasm` | Expected WASM artifact  |
+| `RPC_TESTNET`             | `https://soroban-testnet.stellar.org/health`   | Testnet health endpoint          |
+| `RPC_MAINNET`             | `https://soroban.stellar.org/health`           | Mainnet health endpoint          |
+| `RPC_FUTURENET`           | `https://rpc-futurenet.stellar.org/health`     | Futurenet health endpoint        |
+| `NETWORK_TIMEOUT`         | `10`                                           | curl max-time (seconds)          |
+| `DEFAULT_NETWORK`         | `testnet`                                      | Default Stellar network          |
+| `DEFAULT_DEPLOY_LOG`      | `deploy_errors.log`                            | Default log file path            |
+| `DEFAULT_MIN_CONTRIBUTION`| `1`                                            | Default minimum pledge (stroops) |
 
 ## Usage
 
@@ -73,13 +99,21 @@ actionable message. This script adds:
 | `goal`            | integer | Funding goal in stroops                          |
 | `deadline`        | integer | Unix timestamp — must be in the future           |
 | `min_contribution`| integer | Minimum pledge amount (default: `1`)             |
+| Parameter          | Type    | Description                                      |
+| :----------------- | :------ | :----------------------------------------------- |
+| `creator`          | string  | Stellar address of the campaign creator          |
+| `token`            | string  | Stellar address of the token contract            |
+| `goal`             | integer | Funding goal in stroops                          |
+| `deadline`         | integer | Unix timestamp — must be in the future           |
+| `min_contribution` | integer | Minimum pledge amount (default: `DEFAULT_MIN_CONTRIBUTION=1`) |
 
 ### Environment variables
 
-| Variable     | Default            | Description                        |
-| :----------- | :----------------- | :--------------------------------- |
-| `NETWORK`    | `testnet`          | Stellar network to target          |
-| `DEPLOY_LOG` | `deploy_errors.log`| File that captures all error output|
+| Variable     | Default (`DEFAULT_*` constant) | Description                         |
+| :----------- | :----------------------------- | :---------------------------------- |
+| `NETWORK`    | `testnet`                      | Stellar network to target           |
+| `DEPLOY_LOG` | `deploy_errors.log`            | File that captures all error output |
+| `DRY_RUN`    | `false`                        | Skip build/deploy/init when `true`  |
 
 ### Example
 
@@ -110,6 +144,15 @@ DEADLINE=$(date -d "+30 days" +%s)
 | 3    | `cargo build` failure          |
 | 4    | `stellar contract deploy` failure |
 | 5    | `stellar contract invoke` (init) failure |
+| Constant            | Code | Meaning                                  |
+| :------------------ | :--- | :--------------------------------------- |
+| `EXIT_OK`           | 0    | Success                                  |
+| `EXIT_MISSING_DEP`  | 1    | Missing dependency (cargo / stellar CLI) |
+| `EXIT_BAD_ARG`      | 2    | Invalid or missing argument              |
+| `EXIT_BUILD_FAIL`   | 3    | `cargo build` failure                    |
+| `EXIT_DEPLOY_FAIL`  | 4    | `stellar contract deploy` failure        |
+| `EXIT_INIT_FAIL`    | 5    | `stellar contract invoke` (init) failure |
+| `EXIT_NETWORK_FAIL` | 6    | RPC connectivity check failed            |
 
 ## Error log format
 
@@ -200,6 +243,7 @@ making it straightforward to `grep` for specific failures in CI logs.
   in production (`chmod 600 deploy_errors.log`).
 - The script does **not** store or echo secret keys at any point.
 - `set -euo pipefail` ensures unhandled errors abort execution immediately.
+- All constants are declared `readonly` to prevent accidental mutation at runtime.
 
 ## Running the tests
 
@@ -233,23 +277,16 @@ No external test framework is required. The test file stubs `cargo` and
 
 | Area                        | Cases |
 | :-------------------------- | :---- |
+| `constants`                 | 16    |
 | `require_tool`              | 2     |
 | `validate_args`             | 9     |
 | `build_contract`            | 3     |
 | `deploy_contract`           | 3     |
 | `init_contract`             | 2     |
+| `check_network`             | 5     |
 | `log` / `die`               | 4     |
 | `DEPLOY_LOG` file behaviour | 2     |
-| **Total**                   | **25**|
+| **Total**                   | **46**|
 
-All 25 tests pass (100 % coverage of every exported function and the
-`main` entry-point log-truncation behaviour).
-
-### Known fix: `WASM_PATH` override ordering
-
-The `main truncates DEPLOY_LOG at start` integration test builds a
-self-contained script that stubs `cargo` and `stellar`. The `WASM_PATH`
-override must be placed **after** the inlined script body, because the
-script re-declares `WASM_PATH` as a global at the top of its configuration
-section. Placing the override last ensures `build_contract` resolves the
-correct temp path at runtime.
+All 46 tests pass (100% coverage of every exported function, all constants,
+and the `main` entry-point log-truncation behaviour).

@@ -49,9 +49,45 @@ set -euo pipefail
 
 # ── Configuration ────────────────────────────────────────────────────────────
 
-NETWORK="${NETWORK:-testnet}"
-DEPLOY_LOG="${DEPLOY_LOG:-deploy_errors.log}"
-WASM_PATH="target/wasm32-unknown-unknown/release/crowdfund.wasm"
+# @notice Named exit codes for each failure category.
+#         Using constants prevents silent mismatches between the script body,
+#         tests, and CI step-failure checks.
+readonly EXIT_OK=0
+readonly EXIT_MISSING_DEP=1
+readonly EXIT_BAD_ARG=2
+readonly EXIT_BUILD_FAIL=3
+readonly EXIT_DEPLOY_FAIL=4
+readonly EXIT_INIT_FAIL=5
+readonly EXIT_NETWORK_FAIL=6
+
+# ── Build constants ───────────────────────────────────────────────────────────
+
+# @notice Rust compilation target and output artifact path.
+readonly WASM_TARGET="wasm32-unknown-unknown"
+readonly WASM_PATH="target/${WASM_TARGET}/release/crowdfund.wasm"
+
+# ── Network RPC endpoints ─────────────────────────────────────────────────────
+
+# @notice Health-check URLs for each supported Stellar network.
+#         Used by check_network() to verify connectivity before deploying.
+readonly RPC_TESTNET="https://soroban-testnet.stellar.org/health"
+readonly RPC_MAINNET="https://soroban.stellar.org/health"
+readonly RPC_FUTURENET="https://rpc-futurenet.stellar.org/health"
+
+# @notice Maximum seconds to wait for the RPC health-check response.
+readonly NETWORK_TIMEOUT=10
+
+# ── Defaults ──────────────────────────────────────────────────────────────────
+
+# @notice Default values for environment-overridable settings.
+readonly DEFAULT_NETWORK="testnet"
+readonly DEFAULT_DEPLOY_LOG="deploy_errors.log"
+readonly DEFAULT_MIN_CONTRIBUTION=1
+
+# ── Runtime configuration (env-overridable) ───────────────────────────────────
+
+NETWORK="${NETWORK:-$DEFAULT_NETWORK}"
+DEPLOY_LOG="${DEPLOY_LOG:-$DEFAULT_DEPLOY_LOG}"
 DRY_RUN="${DRY_RUN:-false}"
 ERROR_COUNT=0
 
@@ -152,6 +188,7 @@ run_captured() {
 print_help() {
   cat <<HELPEOF
   command -v "$1" &>/dev/null || die 1 "Required tool not found: $1" "Ensure '$1' is installed and on your PATH"
+  command -v "$1" &>/dev/null || die $EXIT_MISSING_DEP "Required tool not found: $1" "Ensure '$1' is installed and on your PATH"
 }
 
 # @notice Runs a command, capturing its stderr to the deploy log and measuring
@@ -169,7 +206,7 @@ run_captured() {
 
 # @notice Prints a usage summary and exits 0.
 print_help() {
-  cat <<'HELPEOF'
+  cat <<HELPEOF
 Usage: deployment_shell_script.sh [OPTIONS] <creator> <token> <goal> <deadline> [min_contribution]
 
 Builds, deploys, and initialises the Stellar Raise crowdfund contract.
@@ -201,14 +238,16 @@ HELPEOF
   command -v "$1" &>/dev/null || die 1 "Required tool not found: $1"
   NETWORK            Stellar network to target (default: testnet)
   DEPLOY_LOG         Path for the error/info log (default: deploy_errors.log)
+  NETWORK            Stellar network to target (default: $DEFAULT_NETWORK)
+  DEPLOY_LOG         Path for the error/info log (default: $DEFAULT_DEPLOY_LOG)
   DRY_RUN            Set to 'true' to enable dry-run mode
 
 Exit codes:
-  0  success             3  build failure        6  network failure
-  1  missing dependency  4  deploy failure
-  2  invalid argument    5  init failure
+  $EXIT_OK  success             $EXIT_BUILD_FAIL  build failure        $EXIT_NETWORK_FAIL  network failure
+  $EXIT_MISSING_DEP  missing dependency  $EXIT_DEPLOY_FAIL  deploy failure
+  $EXIT_BAD_ARG  invalid argument    $EXIT_INIT_FAIL  init failure
 HELPEOF
-  exit 0
+  exit $EXIT_OK
 }
 
 # ── Argument validation ───────────────────────────────────────────────────────
@@ -260,38 +299,39 @@ check_network() {
 # @param  $2  token     – Stellar address of the token contract
 # @param  $3  goal      – Funding goal (integer, stroops)
 # @param  $4  deadline  – Unix timestamp for campaign end
-# @param  $5  min_contribution – Minimum pledge amount (default: 1)
+# @param  $5  min_contribution – Minimum pledge amount
 validate_args() {
   local creator="$1" token="$2" goal="$3" deadline="$4" min_contribution="$5"
 
-  [[ -n "$creator" ]]          || die 2 "creator is required"
-  [[ -n "$token" ]]            || die 2 "token is required"
-  [[ "$goal" =~ ^[0-9]+$ ]]   || die 2 "goal must be a positive integer, got: '$goal'"
-  [[ "$deadline" =~ ^[0-9]+$ ]] || die 2 "deadline must be a Unix timestamp, got: '$deadline'"
-  [[ "$min_contribution" =~ ^[0-9]+$ ]] || die 2 "min_contribution must be a positive integer"
+  [[ -n "$creator" ]]                       || die $EXIT_BAD_ARG "creator is required"
+  [[ -n "$token" ]]                         || die $EXIT_BAD_ARG "token is required"
+  [[ "$goal" =~ ^[0-9]+$ ]]                 || die $EXIT_BAD_ARG "goal must be a positive integer, got: '$goal'"
+  [[ "$deadline" =~ ^[0-9]+$ ]]             || die $EXIT_BAD_ARG "deadline must be a Unix timestamp, got: '$deadline'"
+  [[ "$min_contribution" =~ ^[0-9]+$ ]]     || die $EXIT_BAD_ARG "min_contribution must be a positive integer"
 
   local now; now="$(date +%s)"
-  (( deadline > now )) || die 2 "deadline must be in the future (got $deadline, now $now)"
+  (( deadline > now )) || die $EXIT_BAD_ARG "deadline must be in the future (got $deadline, now $now)"
 }
 
 # ── Network pre-check ────────────────────────────────────────────────────────
 
 # @notice Performs a lightweight connectivity check against the target Stellar
 #         network RPC endpoint. Skipped in dry-run mode and for unknown networks.
+# @dev    Uses NETWORK_TIMEOUT constant to cap the curl wait time.
 check_network() {
   local rpc_url
   case "$NETWORK" in
-    testnet)   rpc_url="https://soroban-testnet.stellar.org/health" ;;
-    mainnet)   rpc_url="https://soroban.stellar.org/health"         ;;
-    futurenet) rpc_url="https://rpc-futurenet.stellar.org/health"   ;;
+    testnet)   rpc_url="$RPC_TESTNET"   ;;
+    mainnet)   rpc_url="$RPC_MAINNET"   ;;
+    futurenet) rpc_url="$RPC_FUTURENET" ;;
     *)
       warn "Unknown network '$NETWORK' — skipping connectivity pre-check"
       return 0
       ;;
   esac
   log "INFO" "Checking network connectivity ($NETWORK)..."
-  if ! curl --silent --fail --max-time 10 "$rpc_url" &>/dev/null 2>>"$DEPLOY_LOG"; then
-    die 6 "Network connectivity check failed for $NETWORK" "GET $rpc_url timed out or returned non-200"
+  if ! curl --silent --fail --max-time "$NETWORK_TIMEOUT" "$rpc_url" &>/dev/null 2>>"$DEPLOY_LOG"; then
+    die $EXIT_NETWORK_FAIL "Network connectivity check failed for $NETWORK" "GET $rpc_url timed out or returned non-200"
   fi
   log "INFO" "Network reachable."
 }
@@ -320,10 +360,10 @@ deploy_contract() {
 # @notice Compiles the contract to WASM.
 build_contract() {
   log "INFO" "Building WASM..."
-  if ! run_captured cargo build --target wasm32-unknown-unknown --release; then
-    die 3 "cargo build failed – see $DEPLOY_LOG for details" "cargo build --target wasm32-unknown-unknown --release"
+  if ! run_captured cargo build --target "$WASM_TARGET" --release; then
+    die $EXIT_BUILD_FAIL "cargo build failed – see $DEPLOY_LOG for details" "cargo build --target $WASM_TARGET --release"
   fi
-  [[ -f "$WASM_PATH" ]] || die 3 "WASM artifact not found at $WASM_PATH after build"
+  [[ -f "$WASM_PATH" ]] || die $EXIT_BUILD_FAIL "WASM artifact not found at $WASM_PATH after build"
   log "INFO" "Build succeeded: $WASM_PATH"
 }
 
@@ -344,8 +384,9 @@ deploy_contract() {
   emit_event "step_ok" "deploy" "Contract deployed" "\"contract_id\":\"$contract_id\""
     die 4 "stellar contract deploy failed – see $DEPLOY_LOG for details"
     die 4 "stellar contract deploy failed – see $DEPLOY_LOG for details" "stellar contract deploy --network $NETWORK"
+    die $EXIT_DEPLOY_FAIL "stellar contract deploy failed – see $DEPLOY_LOG for details" "stellar contract deploy --network $NETWORK"
   fi
-  [[ -n "$contract_id" ]] || die 4 "Deploy returned an empty contract ID"
+  [[ -n "$contract_id" ]] || die $EXIT_DEPLOY_FAIL "Deploy returned an empty contract ID"
   log "INFO" "Contract deployed: $contract_id"
   echo "$contract_id"
 }
@@ -411,6 +452,7 @@ main() {
   : > "$DEPLOY_JSON_LOG"
     die 5 "Contract initialisation failed – see $DEPLOY_LOG for details"
     die 5 "Contract initialisation failed – see $DEPLOY_LOG for details" "stellar contract invoke --id $contract_id -- initialize"
+    die $EXIT_INIT_FAIL "Contract initialisation failed – see $DEPLOY_LOG for details" "stellar contract invoke --id $contract_id -- initialize"
   fi
   log "INFO" "Campaign initialised successfully."
 }
@@ -442,7 +484,7 @@ main() {
   local token="${positional[1]:-}"
   local goal="${positional[2]:-}"
   local deadline="${positional[3]:-}"
-  local min_contribution="${positional[4]:-1}"
+  local min_contribution="${positional[4]:-$DEFAULT_MIN_CONTRIBUTION}"
 
   # Truncate log for this run
   : > "$DEPLOY_LOG"
