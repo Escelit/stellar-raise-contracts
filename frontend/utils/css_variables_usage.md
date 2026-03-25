@@ -61,6 +61,7 @@ CSS variables, while powerful, can be a vector for security vulnerabilities if n
 - **`Z_INDEX`**: Shortcut to `THEME.zIndex`.
 - **`EFFECTS`**: Shortcut to `THEME.effects`.
 - **`SAFE_AREA`**: Shortcut to `THEME.safeArea`.
+- **`DOCS`**: Shortcut to `THEME.docs`.
 
 ### Classes
 
@@ -315,6 +316,14 @@ try {
 | `--safe-area-inset-bottom` | Bottom safe area |
 | `--safe-area-inset-left` | Left safe area |
 
+### Documentation
+
+| Variable | Description |
+|----------|-------------|
+| `--color-docs-bg` | Documentation background color |
+| `--color-docs-text` | Documentation text color |
+| `--font-docs-code` | Documentation code font family |
+
 ## Usage Examples
 
 ### Basic Usage
@@ -396,14 +405,14 @@ npm test -- --testPathPatterns="css_variables_usage" --coverage
 
 ### Test Coverage
 
-Current test coverage: **93.22%**
+Current test coverage: **98.57%**
 
 | Metric | Coverage |
 |--------|----------|
-| Statements | 100% |
-| Branches | 100% |
+| Statements | 98.57% |
+| Branches | 86.95% |
 | Functions | 100% |
-| Lines | 100% |
+| Lines | 98.57% |
 
 ### Test Structure
 

@@ -13,6 +13,7 @@ import {
   ALLOWED_CSS_VARIABLES,
   CssVariablesMap,
   useCssVariable,
+  useDocsCssVariable,
   THEME,
   COLORS,
   SPACING,

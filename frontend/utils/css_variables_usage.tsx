@@ -152,6 +152,14 @@ export const THEME = {
     /** @notice Left safe area inset for notched devices */
     left: '--safe-area-inset-left',
   },
+  docs: {
+    /** @notice Documentation background color */
+    bg: '--color-docs-bg',
+    /** @notice Documentation text color */
+    text: '--color-docs-text',
+    /** @notice Documentation code font family */
+    codeFont: '--font-docs-code',
+  },
 } as const;
 
 /**
@@ -164,6 +172,7 @@ export const LAYOUT = THEME.layout;
 export const Z_INDEX = THEME.zIndex;
 export const EFFECTS = THEME.effects;
 export const SAFE_AREA = THEME.safeArea;
+export const DOCS = THEME.docs;
 
 /**
  * @notice Predefined list of allowed CSS variable names
@@ -177,6 +186,7 @@ export const ALLOWED_CSS_VARIABLES = [
   ...Object.values(THEME.zIndex),
   ...Object.values(THEME.effects),
   ...Object.values(THEME.safeArea),
+  ...Object.values(THEME.docs),
 ] as const;
 
 /**
