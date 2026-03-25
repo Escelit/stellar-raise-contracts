@@ -3,11 +3,13 @@
 #![allow(clippy::too_many_arguments)]
 
 use soroban_sdk::{
-    contract, contractclient, contractimpl, contracttype, token, Address, Env, IntoVal, String,
+    contract, contractclient, contractimpl, contracttype, token, Address, Env, String,
     Symbol, Vec,
 };
 pub mod refund_single_token;
+pub mod withdraw_event_emission;
 use refund_single_token::refund_single_transfer;
+use withdraw_event_emission::{emit_withdrawal_event, mint_nfts_in_batch};
 
 pub mod soroban_sdk_minor;
 
@@ -525,55 +527,14 @@ impl CrowdfundContract {
 
         // Bounded NFT minting: process at most MAX_NFT_MINT_BATCH contributors
         // per withdraw() call to cap event emission and gas consumption.
-        let nft_minted_count: u32 = if let Some(nft_contract) = env
+        let nft_contract: Option<Address> = env
             .storage()
             .instance()
-            .get::<_, Address>(&DataKey::NFTContract)
-        {
-            let contributors: Vec<Address> = env
-                .storage()
-                .persistent()
-                .get(&DataKey::Contributors)
-                .unwrap_or_else(|| Vec::new(&env));
-            let mut token_id: u64 = 1;
-            let mut minted: u32 = 0;
-            for contributor in contributors.iter() {
-                if minted >= MAX_NFT_MINT_BATCH {
-                    break;
-                }
-                let contribution: i128 = env
-                    .storage()
-                    .persistent()
-                    .get(&DataKey::Contribution(contributor.clone()))
-                    .unwrap_or(0);
-                if contribution > 0 {
-                    env.invoke_contract::<()>(
-                        &nft_contract,
-                        &Symbol::new(&env, "mint"),
-                        Vec::from_array(
-                            &env,
-                            [contributor.into_val(&env), token_id.into_val(&env)],
-                        ),
-                    );
-                    token_id += 1;
-                    minted += 1;
-                }
-            }
-            // Single summary event instead of one event per contributor.
-            if minted > 0 {
-                env.events()
-                    .publish(("campaign", "nft_batch_minted"), minted);
-            }
-            minted
-        } else {
-            0
-        };
+            .get(&DataKey::NFTContract);
+        let nft_minted_count = mint_nfts_in_batch(&env, &nft_contract);
 
         // Single withdrawal event carrying payout, fee info, and mint count.
-        env.events().publish(
-            ("campaign", "withdrawn"),
-            (creator.clone(), creator_payout, nft_minted_count),
-        );
+        emit_withdrawal_event(&env, &creator, creator_payout, nft_minted_count);
 
         Ok(())
     }
@@ -672,9 +633,6 @@ impl CrowdfundContract {
     /// * Requires `contributor.require_auth()` — only the contributor can claim.
     /// * Zeroes the contribution record **before** transfer (checks-effects-interactions).
     /// * Uses `checked_sub` to prevent underflow on `total_raised`.
-    pub fn refund_single(env: Env, contributor: Address) -> Result<(), ContractError> {
-        contributor.require_auth();
-
     /// Claim a refund for a single contributor (pull-based).
     ///
     /// # Errors
