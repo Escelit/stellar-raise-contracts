@@ -128,6 +128,8 @@ Key speed optimisations:
 |---|---|
 | `scripts/github_actions_test.sh` | Validates workflow files in CI or locally (8 checks) |
 | `scripts/github_actions_test.test.sh` | Tests the validator against pass/fail scenarios (9 tests) |
+| `scripts/github_actions_test.sh` | Validates workflow files in CI or locally (11 checks) |
+| `scripts/github_actions_test.test.sh` | Tests the validator against pass/fail scenarios (11 tests) |
 
 Run locally:
 
@@ -221,6 +223,9 @@ up contract uploads.
 ---
 
 ## Speed optimisations in `rust_ci.yml`
+## Logging bounds added to `rust_ci.yml`
+
+Three changes improve observability and prevent runaway builds:
 
 | What | Where | Value |
 |---|---|---|
@@ -287,6 +292,13 @@ The test suite (`github_actions_test.test.sh`) covers 20 tests across 12 checks:
 | `scripts/github_actions_test.sh` | Added checks 9–12 (rust-cache, timeout, permissions, wasm-opt); extracted `check_file_exists_and_nonempty` helper; added `readonly` to constants; improved `grep` safety with `--` flag; updated summary to show 12/12 |
 | `scripts/github_actions_test.test.sh` | Added tests 14–20 covering new checks 9–12 and additional edge cases; added `VERBOSE` env var support; improved fixture isolation |
 | `scripts/github_actions_test.md` | Documented all 12 checks, 20 tests, VERBOSE flag, and security rationale for new checks |
+| Test step timeout | `Run tests` step | 15 min |
+| Elapsed-time log | `Log total job elapsed time` step (always runs) | soft warn at 20 min |
+
+The elapsed-time step runs with `if: always()` so it fires even on failure,
+giving a timing signal for slow or hung jobs. It emits a `::warning::` annotation
+if the job exceeds the 20-minute soft target without failing the build.
+
 ## Security notes
 
 - No secrets or credentials are introduced or modified.
@@ -294,3 +306,5 @@ The test suite (`github_actions_test.test.sh`) covers 20 tests across 12 checks:
 - The spellcheck action runs with default (read-only) permissions.
 - Using `stellar-cli` (the maintained successor) reduces supply-chain risk
   compared to the deprecated `soroban-cli` package.
+- `timeout-minutes` bounds prevent a compromised or infinite-looping dependency
+  from holding a runner indefinitely.
