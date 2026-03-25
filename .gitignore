@@ -17,6 +17,7 @@ Thumbs.db
 # Soroban / Stellar
 .soroban/
 # Soroban / Rust
+# Soroban / Stellar
 .soroban/
 *.d
 *.wasm
