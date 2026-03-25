@@ -153,6 +153,8 @@ pub enum ContractError {
     BelowMinimum = 9,
     /// Returned by `contribute` when the campaign is not active.
     CampaignNotActive = 10,
+    /// Returned by `contribute` when `amount` is negative.
+    NegativeAmount = 11,
 }
 
 #[contractclient(name = "NftContractClient")]
@@ -273,6 +275,10 @@ impl CrowdfundContract {
         let status: Status = env.storage().instance().get(&DataKey::Status).unwrap();
         if status != Status::Active {
             return Err(ContractError::CampaignNotActive);
+        }
+
+        if amount < 0 {
+            return Err(ContractError::NegativeAmount);
         }
 
         if amount == 0 {
