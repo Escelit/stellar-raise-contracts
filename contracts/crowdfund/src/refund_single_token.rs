@@ -84,6 +84,7 @@ use soroban_sdk::{token, Address};
 #![allow(missing_docs)]
 
 use soroban_sdk::{token, Address, Env};
+use soroban_sdk::{token, Address, Env, Symbol};
 
 use crate::{ContractError, DataKey, Status};
 
@@ -97,6 +98,10 @@ use crate::{ContractError, DataKey, Status};
 /// @param contract_address The crowdfund contract's own address.
 /// @param contributor Recipient of the refund.
 /// @param amount Token amount to transfer (must be > 0).
+/// @notice Transfers `amount` tokens from `contract_address` to `contributor`.
+/// @notice Skips transfers where `amount <= 0` to prevent gas waste on no-op calls.
+/// @dev    Keeping this in one place prevents parameter-order typos at call sites.
+/// @dev    Emits debug event before transfer for observability.
 pub fn refund_single_transfer(
     token_client: &token::Client,
     contract_address: &Address,
@@ -192,6 +197,14 @@ pub fn execute_refund_single(
 
     Ok(())
 }
+        // Early return prevents gas waste on zero/non-positive amounts
+        return;
+    }
+
+    // Debug logging for devex and monitoring
+    token_client.env().events()
+        .publish(("debug", "refund_transfer_attempt"), (contributor.clone(), amount));
+
     token_client.transfer(contract_address, contributor, &amount);
 /// @title   RefundSingle — Single-contributor token refund logic
 /// @notice  Encapsulates the token transfer step that returns a contributor's
@@ -299,6 +312,13 @@ pub fn validate_refund_preconditions(
 
     Ok(amount)
 }
+    let token_client = token::Client::new(env, token_address);
+    refund_single_transfer(
+        &token_client,
+        &env.current_contract_address(),
+        contributor,
+        amount,
+    );
 
 // ── Atomic CEI execution ──────────────────────────────────────────────────────
 
@@ -347,3 +367,14 @@ pub fn execute_refund_single(
 
     Ok(())
 }
+    amount
+}
+
+/// Returns the stored contribution amount for a contributor.
+pub fn get_contribution(env: &Env, contributor: &Address) -> i128 {
+    env.storage()
+        .persistent()
+        .get(&DataKey::Contribution(contributor.clone()))
+        .unwrap_or(0)
+}
+

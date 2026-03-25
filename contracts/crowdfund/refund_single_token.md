@@ -264,6 +264,7 @@ With many contributors this is unsafe:
 constant and predictable regardless of campaign size.
 
 ---
+If the contributor has `0` stored contribution, `refund_single_transfer` helper skips the transfer (gas optimization) and returns `Ok(())`.
 
 ## Security Model
 
@@ -299,6 +300,17 @@ and the function signature enforces the order.
 `validate_refund_preconditions` is a pure read function — it mutates no state.
 This makes it safe to call speculatively (e.g. in a simulation or dry-run) and
 easy to unit-test in isolation.
+5. **Zero-amount optimization**  
+   `refund_single_transfer` skips transfers where `amount <= 0`, preventing no-op gas waste.
+
+6. **Debug logging**  
+   Emits `("debug", "refund_transfer_attempt") (contributor, amount)` before successful transfers for observability.
+
+
+## Test coverage
+
+`refund_single_token.test.rs` + `refund_single_token_security_tests.rs` cover:
+
 
 ---
 

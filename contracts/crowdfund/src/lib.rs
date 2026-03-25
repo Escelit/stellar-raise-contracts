@@ -2200,10 +2200,13 @@ impl CrowdfundContract {
     /// * [`ContractError::GoalReached`]         – Goal was met; no refunds available.
     /// * [`ContractError::NothingToRefund`]     – Caller has no contribution on record.
     ///
-    /// # Security
+    /// # Security & Optimizations
     /// * Requires `contributor.require_auth()` — only the contributor can claim.
     /// * Zeroes the contribution record **before** transfer (checks-effects-interactions).
     /// * Uses `checked_sub` to prevent underflow on `total_raised`.
+    /// * `refund_single_transfer` helper skips amount <= 0 (gas optimization).
+    /// * Debug event emitted before transfer for monitoring.
+
     pub fn refund_single(env: Env, contributor: Address) -> Result<(), ContractError> {
         contributor.require_auth();
 
@@ -2279,12 +2282,13 @@ impl CrowdfundContract {
 
         // Emit a structured event for off-chain indexers and scripts.
         env.events()
-            .publish(("campaign", "refund_single"), (contributor, amount));
+            .publish(("campaign", "refund_single"), (contributor.clone(), amount));
 
         Ok(())
         let amount = validate_refund_preconditions(&env, &contributor)?;
         execute_refund_single(&env, &contributor, amount)
     }
+
 
     /// Cancel the campaign and refund all contributors — callable only by
     /// the creator while the campaign is still Active.
