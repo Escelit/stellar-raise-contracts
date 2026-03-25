@@ -52,6 +52,8 @@ set -euo pipefail
 NETWORK="${NETWORK:-testnet}"
 DEPLOY_LOG="${DEPLOY_LOG:-deploy_errors.log}"
 WASM_PATH="target/wasm32-unknown-unknown/release/crowdfund.wasm"
+DRY_RUN="${DRY_RUN:-false}"
+ERROR_COUNT=0
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -105,11 +107,27 @@ warn() {
   (( ERROR_COUNT++ )) || true
   log "WARN" "$1"
 # @notice Logs an error and exits with the supplied code.
+# @notice Logs an error with optional context (failed command / captured stderr)
+#         and exits with the supplied code. Increments ERROR_COUNT before exit.
 # @param  $1  exit_code
 # @param  $2  message
+# @param  $3  context  (optional – extra detail such as the failed command)
 die() {
-  log "ERROR" "$2"
-  exit "$1"
+  local code="$1" msg="$2" context="${3:-}"
+  (( ERROR_COUNT++ )) || true
+  log "ERROR" "$msg"
+  if [[ -n "$context" ]]; then
+    log "ERROR" "  context: $context"
+  fi
+  log "ERROR" "  exit_code=$code  errors_total=$ERROR_COUNT"
+  exit "$code"
+}
+
+# @notice Records a non-fatal warning and increments the error counter.
+# @param  $1  message
+warn() {
+  (( ERROR_COUNT++ )) || true
+  log "WARN" "$1"
 }
 
 # @notice Verifies that a required CLI tool is present on PATH.
@@ -133,6 +151,25 @@ run_captured() {
 # @notice Prints usage and exits 0.
 print_help() {
   cat <<HELPEOF
+  command -v "$1" &>/dev/null || die 1 "Required tool not found: $1" "Ensure '$1' is installed and on your PATH"
+}
+
+# @notice Runs a command, capturing its stderr to the deploy log and measuring
+#         elapsed time. Returns the command's exit code.
+# @param  $@  command and arguments
+run_captured() {
+  local start_time end_time elapsed rc=0
+  start_time=$(date +%s)
+  "$@" 2>>"$DEPLOY_LOG" || rc=$?
+  end_time=$(date +%s)
+  elapsed=$(( end_time - start_time ))
+  log "INFO" "  step_duration=${elapsed}s  command='$1'"
+  return $rc
+}
+
+# @notice Prints a usage summary and exits 0.
+print_help() {
+  cat <<'HELPEOF'
 Usage: deployment_shell_script.sh [OPTIONS] <creator> <token> <goal> <deadline> [min_contribution]
 
 Builds, deploys, and initialises the Stellar Raise crowdfund contract.
@@ -143,6 +180,7 @@ Positional arguments:
   goal               Funding goal in stroops (positive integer)
   deadline           Unix timestamp for campaign end (must be in the future)
   min_contribution   Minimum pledge amount (default: $DEFAULT_MIN_CONTRIBUTION)
+  min_contribution   Minimum pledge amount (default: 1)
 
 Options:
   --help             Show this help message and exit
@@ -161,6 +199,16 @@ Exit codes:
 HELPEOF
   exit $EXIT_OK
   command -v "$1" &>/dev/null || die 1 "Required tool not found: $1"
+  NETWORK            Stellar network to target (default: testnet)
+  DEPLOY_LOG         Path for the error/info log (default: deploy_errors.log)
+  DRY_RUN            Set to 'true' to enable dry-run mode
+
+Exit codes:
+  0  success             3  build failure        6  network failure
+  1  missing dependency  4  deploy failure
+  2  invalid argument    5  init failure
+HELPEOF
+  exit 0
 }
 
 # ── Argument validation ───────────────────────────────────────────────────────
@@ -226,6 +274,28 @@ validate_args() {
   (( deadline > now )) || die 2 "deadline must be in the future (got $deadline, now $now)"
 }
 
+# ── Network pre-check ────────────────────────────────────────────────────────
+
+# @notice Performs a lightweight connectivity check against the target Stellar
+#         network RPC endpoint. Skipped in dry-run mode and for unknown networks.
+check_network() {
+  local rpc_url
+  case "$NETWORK" in
+    testnet)   rpc_url="https://soroban-testnet.stellar.org/health" ;;
+    mainnet)   rpc_url="https://soroban.stellar.org/health"         ;;
+    futurenet) rpc_url="https://rpc-futurenet.stellar.org/health"   ;;
+    *)
+      warn "Unknown network '$NETWORK' — skipping connectivity pre-check"
+      return 0
+      ;;
+  esac
+  log "INFO" "Checking network connectivity ($NETWORK)..."
+  if ! curl --silent --fail --max-time 10 "$rpc_url" &>/dev/null 2>>"$DEPLOY_LOG"; then
+    die 6 "Network connectivity check failed for $NETWORK" "GET $rpc_url timed out or returned non-200"
+  fi
+  log "INFO" "Network reachable."
+}
+
 # ── Core steps ───────────────────────────────────────────────────────────────
 
 # @notice Compiles the contract to WASM using the WASM_TARGET constant.
@@ -250,8 +320,8 @@ deploy_contract() {
 # @notice Compiles the contract to WASM.
 build_contract() {
   log "INFO" "Building WASM..."
-  if ! cargo build --target wasm32-unknown-unknown --release 2>>"$DEPLOY_LOG"; then
-    die 3 "cargo build failed – see $DEPLOY_LOG for details"
+  if ! run_captured cargo build --target wasm32-unknown-unknown --release; then
+    die 3 "cargo build failed – see $DEPLOY_LOG for details" "cargo build --target wasm32-unknown-unknown --release"
   fi
   [[ -f "$WASM_PATH" ]] || die 3 "WASM artifact not found at $WASM_PATH after build"
   log "INFO" "Build succeeded: $WASM_PATH"
@@ -273,6 +343,7 @@ deploy_contract() {
   [[ -n "$contract_id" ]] || die 4 "Deploy returned an empty contract ID" "" "deploy"
   emit_event "step_ok" "deploy" "Contract deployed" "\"contract_id\":\"$contract_id\""
     die 4 "stellar contract deploy failed – see $DEPLOY_LOG for details"
+    die 4 "stellar contract deploy failed – see $DEPLOY_LOG for details" "stellar contract deploy --network $NETWORK"
   fi
   [[ -n "$contract_id" ]] || die 4 "Deploy returned an empty contract ID"
   log "INFO" "Contract deployed: $contract_id"
@@ -339,18 +410,39 @@ main() {
   : > "$DEPLOY_LOG"
   : > "$DEPLOY_JSON_LOG"
     die 5 "Contract initialisation failed – see $DEPLOY_LOG for details"
+    die 5 "Contract initialisation failed – see $DEPLOY_LOG for details" "stellar contract invoke --id $contract_id -- initialize"
   fi
   log "INFO" "Campaign initialised successfully."
+}
+
+# @notice Prints a final summary of errors/warnings captured during the run.
+print_summary() {
+  echo ""
+  if [[ "$ERROR_COUNT" -gt 0 ]]; then
+    log "WARN" "Completed with $ERROR_COUNT warning(s). Review $DEPLOY_LOG for details."
+  else
+    log "INFO" "Deployment completed successfully with 0 errors."
+  fi
 }
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 main() {
-  local creator="${1:-}"
-  local token="${2:-}"
-  local goal="${3:-}"
-  local deadline="${4:-}"
-  local min_contribution="${5:-1}"
+  # Handle --help and --dry-run flags before positional args
+  local positional=()
+  for arg in "$@"; do
+    case "$arg" in
+      --help)    print_help ;;
+      --dry-run) DRY_RUN="true" ;;
+      *)         positional+=("$arg") ;;
+    esac
+  done
+
+  local creator="${positional[0]:-}"
+  local token="${positional[1]:-}"
+  local goal="${positional[2]:-}"
+  local deadline="${positional[3]:-}"
+  local min_contribution="${positional[4]:-1}"
 
   # Truncate log for this run
   : > "$DEPLOY_LOG"
