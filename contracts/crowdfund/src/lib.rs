@@ -147,6 +147,12 @@ pub enum Status {
 
 /// Represents a single roadmap milestone with a date and description.
 pub mod refund_single_token;
+pub mod soroban_sdk_minor;
+
+#[cfg(test)]
+mod soroban_sdk_minor_test;
+
+// ── Version ─────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
 mod refund_single_token_test;
