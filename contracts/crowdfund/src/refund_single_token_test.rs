@@ -85,6 +85,7 @@ mod refund_single_tests {
             &None,   // platform_config
             &None,   // bonus_goal
             &None,   // bonus_goal_description
+            &None,   // metadata_uri
         );
     }
 

@@ -51,6 +51,7 @@ fn setup(
         &None,
         &None,
         &None,
+        &None,
     );
 
     (env, contract_id, client, admin, creator, token_addr)

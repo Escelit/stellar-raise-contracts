@@ -50,6 +50,7 @@ fn default_init(
         &None,
         &None,
         &None,
+        &None,
     );
     admin
 }
@@ -119,6 +120,7 @@ fn test_bonus_goal_progress_bps_capped_at_100_percent() {
         &1_000,
         &None,
         &Some(2_000_000i128),
+        &None,
         &None,
     );
 

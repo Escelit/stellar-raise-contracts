@@ -49,6 +49,7 @@ fn init(
 ) {
     client.initialize(
         creator, creator, token, &goal, &deadline, &1_000, &None, &None, &None,
+        &None,
     );
 }
 

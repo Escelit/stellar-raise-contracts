@@ -71,6 +71,7 @@ fn setup(
         &creator,
         &creator,
         &token_addr,
+            &None,
         &(contributor_count as i128 * 100), // goal = exactly what contributors will raise
         &deadline,
         &1,
@@ -186,6 +187,7 @@ fn test_withdraw_no_batch_event_without_nft_contract() {
         &None,
         &None,
         &None,
+        &None,
     );
 
     let contributor = Address::generate(&env);
@@ -207,7 +209,7 @@ fn test_withdraw_emits_withdrawn_event_once() {
     let (env, client, _creator, _token, _nft_id) = setup(2);
     client.withdraw();
 
-    assert_eq!(count_events_with_topic(&env, "campaign", "withdrawn"), 1);
+    assert_eq!(count_events_with_topic(&env, "campaign", "funds_withdrawn"), 1);
 }
 
 /// No `nft_batch_minted` event when all contributors have zero contribution.

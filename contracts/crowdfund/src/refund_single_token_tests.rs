@@ -64,6 +64,7 @@ fn init(
 ) {
     client.initialize(
         creator, creator, token, &goal, &deadline, &1_000, &None, &None, &None,
+        &None,
     );
 }
 
@@ -352,6 +353,7 @@ fn test_refund_single_requires_contributor_auth() {
         &None,
         &None,
         &None,
+        &None,
     );
     client.contribute(&alice, &500_000);
     env.ledger().set_timestamp(deadline + 1);
@@ -416,6 +418,7 @@ fn test_refund_single_ignores_platform_fee() {
         &deadline,
         &1_000,
         &Some(PlatformConfig {
+                &None,
             address: platform_addr.clone(),
             fee_bps: 500, // 5%
         }),
