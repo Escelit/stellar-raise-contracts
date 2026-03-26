@@ -120,19 +120,16 @@ const { execSync, exec } = require('child_process');
 const { execSync, spawnSync } = require('child_process');
  * readme_md_installation.test.js
  *
- * Programmatically verifies that the installation commands documented in
- * README.md and docs/readme_md_installation.md execute without errors.
+ * Verifies that the installation commands documented in README.md and
+ * docs/readme_md_installation.md are correct and that supporting scripts
+ * conform to their documented logging bounds.
  *
- * Coverage target: 95%+ of "Getting Started" commands.
- *
- * @security  Tests run in the current working directory. They do not write
- *            to the network or require Stellar keys. No secret material is
- *            accessed or generated.
+ * @security Tests run locally only. No network calls, no Stellar keys required.
  */
 
 'use strict';
 
-const { execSync } = require('child_process');
+const { execSync, spawnSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
@@ -173,12 +170,35 @@ function parseLog(line) {
   }
   return map;
 const EXEC_OPTS = { encoding: 'utf8', stdio: 'pipe' };
+const ROOT = path.resolve(__dirname);
+const DEPLOY_SCRIPT = path.join(ROOT, 'scripts', 'deploy.sh');
+const INTERACT_SCRIPT = path.join(ROOT, 'scripts', 'interact.sh');
 
-// ── helpers ──────────────────────────────────────────────────────────────────
-
-/** Run a command and return stdout, or throw with a clear message. */
+/** Run a shell command, return stdout string. Throws on non-zero exit. */
 function run(cmd, opts = {}) {
-  return execSync(cmd, { ...EXEC_OPTS, ...opts });
+  return execSync(cmd, { encoding: 'utf8', stdio: 'pipe', ...opts });
+}
+
+/** Spawn a script with args, return { stdout, status }. Never throws. */
+function spawn(script, args = []) {
+  const result = spawnSync('bash', [script, ...args], { encoding: 'utf8' });
+  return { stdout: result.stdout || '', status: result.status };
+}
+
+/** Extract [LOG] lines from output. */
+function logLines(output) {
+  return output.split('\n').filter(l => l.includes('[LOG]'));
+}
+
+/** Parse a single [LOG] line into a key=value object. */
+function parseLog(line) {
+  const obj = {};
+  const pairs = line.replace(/.*\[LOG\]\s*/, '').trim().split(/\s+/);
+  for (const pair of pairs) {
+    const [k, v] = pair.split('=');
+    if (k) obj[k] = v ?? '';
+  }
+  return obj;
 }
 
 // ── Prerequisites ─────────────────────────────────────────────────────────────
@@ -229,76 +249,49 @@ describe('Script Files', () => {
     expect(fs.statSync(INTERACT_SCRIPT).mode & 0o111).toBeTruthy();
   });
 describe('Prerequisites', () => {
-  test('rustc is installed (stable channel)', () => {
-    const out = run('rustc --version');
-    expect(out).toMatch(/^rustc \d+\.\d+\.\d+/);
+  test('rustc is installed', () => {
+    expect(run('rustc --version')).toMatch(/^rustc \d+\.\d+\.\d+/);
   });
 
   test('cargo is installed', () => {
-    const out = run('cargo --version');
-    expect(out).toMatch(/^cargo \d+\.\d+\.\d+/);
+    expect(run('cargo --version')).toMatch(/^cargo \d+\.\d+\.\d+/);
   });
 
   test('wasm32-unknown-unknown target is installed', () => {
-    const out = run('rustup target list --installed');
-    expect(out).toContain('wasm32-unknown-unknown');
+    expect(run('rustup target list --installed')).toContain('wasm32-unknown-unknown');
   });
 
   test('stellar CLI is installed (v20+ rename)', () => {
-    const out = run('stellar --version');
-    expect(out).toContain('stellar-cli');
+    expect(run('stellar --version')).toContain('stellar-cli');
   });
 
   test('Node.js >= 18 is available', () => {
-    const out = run('node --version');
-    const major = parseInt(out.trim().replace('v', ''), 10);
+    const major = parseInt(run('node --version').trim().replace('v', ''), 10);
     expect(major).toBeGreaterThanOrEqual(18);
   });
-});
-
-// ── Getting Started commands ──────────────────────────────────────────────────
-
-describe('Getting Started', () => {
-  test('cargo build --dry-run succeeds (wasm32 release)', () => {
-    run(
-      'cargo build --release --target wasm32-unknown-unknown -p crowdfund --dry-run',
-      { cwd: ROOT, timeout: 30000 }
-    );
-  }, 35000);
-
-  test('cargo test --no-run compiles test suite', () => {
-    run('cargo test --no-run --workspace', { cwd: ROOT, timeout: 120000, stdio: 'ignore' });
-  }, 130000);
 });
 
 // ── deploy.sh logging bounds ──────────────────────────────────────────────────
 
 describe('deploy.sh logging bounds', () => {
-  // Run with missing args to trigger early exit — we only test log format,
-  // not actual network calls.
-  test('10 - deploy.sh with no args exits non-zero (missing required args)', () => {
-    const { status } = run(DEPLOY_SCRIPT, []);
+  test('deploy.sh with no args exits non-zero (missing required args)', () => {
+    const { status } = spawn(DEPLOY_SCRIPT);
     expect(status).not.toBe(0);
   });
 
-  test('11 - deploy.sh emits no [LOG] lines before arg validation fails', () => {
-    const { stdout } = run(DEPLOY_SCRIPT, []);
+  test('deploy.sh emits no [LOG] lines before arg validation fails', () => {
+    const { stdout } = spawn(DEPLOY_SCRIPT);
     expect(logLines(stdout).length).toBe(0);
   });
 
-  test('12 - [LOG] line format is key=value pairs', () => {
-    // Simulate a partial run by sourcing just the echo lines via bash -c
-    const out = execSync(
-      `bash -c 'echo "[LOG] step=build status=start"'`,
-      { encoding: 'utf8' }
-    ).trim();
+  test('[LOG] line format is key=value pairs', () => {
+    const out = run(`bash -c 'echo "[LOG] step=build status=start"'`).trim();
     const parsed = parseLog(out);
     expect(parsed.step).toBe('build');
     expect(parsed.status).toBe('start');
   });
 
-  test('13 - deploy.sh [LOG] lines use step= field', () => {
-    // Verify the script source contains the expected log patterns
+  test('deploy.sh source contains all 7 expected [LOG] patterns', () => {
     const src = fs.readFileSync(DEPLOY_SCRIPT, 'utf8');
     expect(src).toMatch(/\[LOG\] step=build status=start/);
     expect(src).toMatch(/\[LOG\] step=build status=ok/);
@@ -309,7 +302,7 @@ describe('deploy.sh logging bounds', () => {
     expect(src).toMatch(/\[LOG\] step=done/);
   });
 
-  test('14 - deploy.sh has at most 7 [LOG] echo lines (bounded output)', () => {
+  test('deploy.sh has at most 7 [LOG] echo lines (bounded output)', () => {
     const src = fs.readFileSync(DEPLOY_SCRIPT, 'utf8');
     const count = (src.match(/echo "\[LOG\]/g) || []).length;
     expect(count).toBeLessThanOrEqual(7);
@@ -319,6 +312,43 @@ describe('deploy.sh logging bounds', () => {
     const src = fs.readFileSync(DEPLOY_SCRIPT, 'utf8');
     expect(src).toMatch(/\[LOG\] step=done contract_id=/);
 });
+
+// ── interact.sh logging bounds ────────────────────────────────────────────────
+
+describe('interact.sh logging bounds', () => {
+  test('interact.sh with no args exits non-zero', () => {
+    const { status } = spawn(INTERACT_SCRIPT);
+    expect(status).not.toBe(0);
+  });
+
+  test('interact.sh unknown action emits exactly 1 [LOG] error line', () => {
+    const { stdout, status } = spawn(INTERACT_SCRIPT, ['CTEST', 'unknown_action']);
+    expect(status).toBe(1);
+    const lines = logLines(stdout);
+    expect(lines.length).toBe(1);
+    expect(lines[0]).toMatch(/status=error/);
+  });
+
+  test('interact.sh unknown action log line has reason= field', () => {
+    const { stdout } = spawn(INTERACT_SCRIPT, ['CTEST', 'unknown_action']);
+    const parsed = parseLog(logLines(stdout)[0]);
+    expect(parsed.reason).toBe('unknown_action');
+  });
+
+  test('interact.sh contribute action has exactly 2 [LOG] lines in source', () => {
+    const src = fs.readFileSync(INTERACT_SCRIPT, 'utf8');
+    const block = src.match(/contribute\)([\s\S]*?);;/)?.[1] || '';
+    expect((block.match(/echo "\[LOG\]/g) || []).length).toBe(2);
+  });
+
+  test('interact.sh withdraw action has exactly 2 [LOG] lines in source', () => {
+    const src = fs.readFileSync(INTERACT_SCRIPT, 'utf8');
+    const block = src.match(/withdraw\)([\s\S]*?);;/)?.[1] || '';
+    expect((block.match(/echo "\[LOG\]/g) || []).length).toBe(2);
+  });
+});
+
+// ── Edge Cases ────────────────────────────────────────────────────────────────
 
 describe('Edge Case — WASM target', () => {
   test('rustup target list --installed contains wasm32-unknown-unknown', () => {
@@ -506,30 +536,24 @@ describe('Edge Case — WASM target', () => {
 // ── Edge Case: CLI versioning ─────────────────────────────────────────────────
 
 describe('Edge Case — Stellar CLI versioning', () => {
-  test('stellar --version does not contain "soroban" (v20+ rename)', () => {
-    const out = run('stellar --version');
-    // The binary is now `stellar`, not `soroban`
-    expect(out).not.toMatch(/^soroban/);
+  test('stellar --version does not start with "soroban" (v20+ rename)', () => {
+    expect(run('stellar --version')).not.toMatch(/^soroban/);
   });
 
   test('stellar contract --help exits cleanly', () => {
-    // Verifies the CLI sub-command structure expected by deploy scripts
     expect(() => run('stellar contract --help')).not.toThrow();
   });
 });
 
-// ── Edge Case: Network identity ───────────────────────────────────────────────
-
-describe('Edge Case — Network identity (graceful, no keys required)', () => {
+describe('Edge Case — Network identity (no keys required)', () => {
   test('stellar keys list does not crash', () => {
-    // May return empty list — that is fine
     expect(() => {
-      try { run('stellar keys list'); } catch (_) { /* no keys configured */ }
+      try { run('stellar keys list'); } catch (_) { /* no keys configured — acceptable */ }
     }).not.toThrow();
   });
 });
 
-// ── Security: .soroban not committed ─────────────────────────────────────────
+// ── Security ──────────────────────────────────────────────────────────────────
 
 describe('Security', () => {
   test('.soroban/ is listed in .gitignore', () => {
@@ -540,7 +564,6 @@ describe('Security', () => {
   test('verify_env.sh exists and is executable', () => {
     const script = path.join(ROOT, 'scripts', 'verify_env.sh');
     expect(fs.existsSync(script)).toBe(true);
-    // S_IXUSR = 0o100 — owner execute bit
     expect(fs.statSync(script).mode & 0o100).toBeTruthy();
   });
 

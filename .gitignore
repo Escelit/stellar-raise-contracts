@@ -17,6 +17,7 @@ Thumbs.db
 # Soroban / Stellar
 .soroban/
 # Soroban / Rust
+.soroban/
 *.d
 *.wasm
 !contracts/factory/wasm/crowdfund.wasm
