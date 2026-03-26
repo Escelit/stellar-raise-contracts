@@ -9,6 +9,7 @@ use soroban_sdk::{
 // ── Modules ──────────────────────────────────────────────────────────────────
 
 pub mod admin_upgrade_mechanism;
+pub mod access_control;
 pub mod campaign_goal_minimum;
 pub mod cargo_toml_rust;
 pub mod contract_state_size;
@@ -26,31 +27,16 @@ use crowdfund_initialize_function::{execute_initialize, InitParams};
 use refund_single_token::{
     execute_refund_single, refund_single_transfer, validate_refund_preconditions,
 };
-#[cfg(test)]
-#[path = "refund_single_token.test.rs"]
-mod refund_single_token_test;
-
-pub mod admin_upgrade_mechanism;
-pub mod access_control;
-#[cfg(test)]
-mod access_control_tests;
-pub mod soroban_sdk_minor;
-#[cfg(test)]
-mod soroban_sdk_minor_test;
-
-pub mod withdraw_event_emission;
 use withdraw_event_emission::{emit_fee_transferred, emit_withdrawn, mint_nfts_in_batch};
-#[cfg(test)]
-mod withdraw_event_emission_test;
 
-#[cfg(test)]
-#[path = "stellar_token_minter_test.rs"]
-mod stellar_token_minter_test_original;
+// ── Test Modules ─────────────────────────────────────────────────────────────
 
 #[cfg(test)]
 mod test;
 #[cfg(test)]
 mod auth_tests;
+#[cfg(test)]
+mod access_control_tests;
 #[cfg(test)]
 #[path = "admin_upgrade_mechanism.test.rs"]
 mod admin_upgrade_mechanism_test;
@@ -66,13 +52,17 @@ mod contract_state_size_test;
 #[cfg(test)]
 mod contribute_error_handling_tests;
 #[cfg(test)]
-
-#[cfg(test)]
-pub mod proptest_generator_boundary;
+#[path = "refund_single_token.test.rs"]
+mod refund_single_token_test;
 #[cfg(test)]
 #[path = "proptest_generator_boundary.test.rs"]
 mod proptest_generator_boundary_test;
-pub mod stellar_token_minter;
+#[cfg(test)]
+#[path = "soroban_sdk_minor_test.rs"]
+mod soroban_sdk_minor_test;
+#[cfg(test)]
+#[path = "stellar_token_minter_test.rs"]
+mod stellar_token_minter_test_original;
 #[cfg(test)]
 #[path = "stellar_token_minter.test.rs"]
 mod stellar_token_minter_test_comprehensive;
@@ -220,11 +210,12 @@ pub enum ContractError {
     InvalidBonusGoal = 12,
 
     /// Returned by `contribute` when `amount` is zero.
-    ZeroAmount = 8,
-    BelowMinimum = 9,
-    CampaignNotActive = 10,
+    ZeroAmount = 13,
+    BelowMinimum = 14,
+    CampaignNotActive = 15,
     /// Returned by `contribute` when `amount` is negative.
-    NegativeAmount = 11,
+    NegativeAmount = 16,
+}
 
 /// Interface for an external NFT contract used to mint contributor rewards.
 #[contractclient(name = "NftContractClient")]
