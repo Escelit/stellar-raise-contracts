@@ -538,13 +538,14 @@ export function resolveSafeSubmitButtonState(
  * @param disabled           External disabled flag.
  * @param isLocallySubmitting  True while an async onClick is in-flight.
  * @security Prevents duplicate blockchain transactions on rapid clicks.
+ *           Success state is also blocked to prevent re-submission after confirmation.
  */
 export function isSubmitButtonInteractionBlocked(
   state: SubmitButtonState,
   disabled = false,
   isLocallySubmitting = false,
 ): boolean {
-  return Boolean(disabled) || state === "disabled" || state === "submitting" || isLocallySubmitting;
+  return Boolean(disabled) || state === "disabled" || state === "submitting" || state === "success" || isLocallySubmitting;
 }
 
 /**

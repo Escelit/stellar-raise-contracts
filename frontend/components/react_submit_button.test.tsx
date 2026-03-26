@@ -1587,7 +1587,10 @@ describe("isSubmitButtonInteractionBlocked", () => {
   it("allows interaction for active states with no flags", () => {
     expect(isSubmitButtonInteractionBlocked("idle", false, false)).toBe(false);
     expect(isSubmitButtonInteractionBlocked("error", false, false)).toBe(false);
-    expect(isSubmitButtonInteractionBlocked("success", false, false)).toBe(false);
+  });
+
+  it("blocks interaction for success state", () => {
+    expect(isSubmitButtonInteractionBlocked("success")).toBe(true);
   });
 });
 
@@ -1671,10 +1674,13 @@ describe("ReactSubmitButton disabled behavior", () => {
     expect(renderBtn({ disabled: true }).disabled).toBe(true);
   });
 
-  it("is NOT disabled in idle, success, or error states by default", () => {
+  it("is NOT disabled in idle or error states by default", () => {
     expect(renderBtn({ state: "idle" }).disabled).toBe(false);
-    expect(renderBtn({ state: "success" }).disabled).toBe(false);
     expect(renderBtn({ state: "error" }).disabled).toBe(false);
+  });
+
+  it("is disabled in success state (prevents re-submission)", () => {
+    expect(renderBtn({ state: "success" }).disabled).toBe(true);
   });
 });
 
@@ -1736,25 +1742,25 @@ describe("ReactSubmitButton click handling", () => {
 
   it("does NOT fire onClick in submitting state", () => {
     const onClick = jest.fn();
-    act(() => {
-      fireEvent.click(renderBtn({ state: "submitting", onClick }));
-    });
+    const { container } = render(<ReactSubmitButton state="submitting" onClick={onClick} />);
+    const btn = container.querySelector("button") as HTMLButtonElement;
+    fireEvent.click(btn);
     expect(onClick).not.toHaveBeenCalled();
   });
 
   it("does NOT fire onClick in disabled state", () => {
     const onClick = jest.fn();
-    act(() => {
-      fireEvent.click(renderBtn({ state: "disabled", onClick }));
-    });
+    const { container } = render(<ReactSubmitButton state="disabled" onClick={onClick} />);
+    const btn = container.querySelector("button") as HTMLButtonElement;
+    fireEvent.click(btn);
     expect(onClick).not.toHaveBeenCalled();
   });
 
   it("does NOT fire onClick when disabled prop is true", () => {
     const onClick = jest.fn();
-    act(() => {
-      fireEvent.click(renderBtn({ disabled: true, onClick }));
-    });
+    const { container } = render(<ReactSubmitButton state="idle" disabled onClick={onClick} />);
+    const btn = container.querySelector("button") as HTMLButtonElement;
+    fireEvent.click(btn);
     expect(onClick).not.toHaveBeenCalled();
   });
 
@@ -1777,6 +1783,21 @@ describe("ReactSubmitButton click handling", () => {
     });
     // If we reach here without throwing, the component swallowed the rejection correctly.
     expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("does NOT fire onClick in success state", () => {
+    const onClick = jest.fn();
+    const { container } = render(<ReactSubmitButton state="success" onClick={onClick} />);
+    const btn = container.querySelector("button") as HTMLButtonElement;
+    fireEvent.click(btn);
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it("handles click gracefully when no onClick is provided", async () => {
+    const btn = renderBtn({ state: "idle" }); // no onClick prop
+    await act(async () => { fireEvent.click(btn); });
+    // No error thrown — the guard returns early when onClick is undefined.
+    expect(btn).toBeTruthy();
   });
 });
 
