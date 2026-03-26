@@ -1707,31 +1707,41 @@ describe("ReactSubmitButton accessibility", () => {
 describe("ReactSubmitButton click handling", () => {
   it("fires onClick in idle state", () => {
     const onClick = jest.fn();
-    fireEvent.click(renderBtn({ onClick }));
+    act(() => {
+      fireEvent.click(renderBtn({ onClick }));
+    });
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 
   it("fires onClick in error state (retry)", () => {
     const onClick = jest.fn();
-    fireEvent.click(renderBtn({ state: "error", onClick }));
+    act(() => {
+      fireEvent.click(renderBtn({ state: "error", onClick }));
+    });
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 
   it("does NOT fire onClick in submitting state", () => {
     const onClick = jest.fn();
-    fireEvent.click(renderBtn({ state: "submitting", onClick }));
+    act(() => {
+      fireEvent.click(renderBtn({ state: "submitting", onClick }));
+    });
     expect(onClick).not.toHaveBeenCalled();
   });
 
   it("does NOT fire onClick in disabled state", () => {
     const onClick = jest.fn();
-    fireEvent.click(renderBtn({ state: "disabled", onClick }));
+    act(() => {
+      fireEvent.click(renderBtn({ state: "disabled", onClick }));
+    });
     expect(onClick).not.toHaveBeenCalled();
   });
 
   it("does NOT fire onClick when disabled prop is true", () => {
     const onClick = jest.fn();
-    fireEvent.click(renderBtn({ disabled: true, onClick }));
+    act(() => {
+      fireEvent.click(renderBtn({ disabled: true, onClick }));
+    });
     expect(onClick).not.toHaveBeenCalled();
   });
 
