@@ -439,7 +439,8 @@ export function useCssVariable(variableName: string, fallback?: string): string 
 export type VarExpression = string;
 
 export function cssVar<V extends AllowedCssVariable>(variableName: V, fallback?: string): VarExpression {
-  const normalizedName = variableName.startsWith('--') ? variableName : `--${variableName}` as V;
+  const trimmed = (variableName as string).trim() as V;
+  const normalizedName = trimmed.startsWith('--') ? trimmed : `--${trimmed}` as V;
   
   CssVariableValidator.isValidVariableName(normalizedName);
 
