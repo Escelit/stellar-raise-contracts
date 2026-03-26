@@ -219,12 +219,15 @@ pub enum ContractError {
     /// Returned by `initialize` when `bonus_goal <= goal`.
     InvalidBonusGoal = 12,
 
+    /// Returned by `validate_goal_amount` when `goal_amount < MIN_GOAL_AMOUNT`.
+    GoalTooLow = 18,
+
     /// Returned by `contribute` when `amount` is zero.
-    ZeroAmount = 8,
-    BelowMinimum = 9,
-    CampaignNotActive = 10,
+    ZeroAmount = 13,
+    BelowMinimum = 14,
+    CampaignNotActive = 15,
     /// Returned by `contribute` when `amount` is negative.
-    NegativeAmount = 11,
+    NegativeAmount = 16,
 
 /// Interface for an external NFT contract used to mint contributor rewards.
 #[contractclient(name = "NftContractClient")]
