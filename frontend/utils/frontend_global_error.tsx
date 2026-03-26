@@ -147,8 +147,9 @@ export function determineErrorSeverity(error: Error): ErrorSeverityLevel {
   // Check for medium severity patterns
   if (
     errorMessage.includes('validation') ||
-    errorMessage.includes('type') ||
-    errorMessage.includes('render')
+    errorMessage.includes('render') ||
+    errorName === 'typeerror' ||
+    errorMessage.includes('type')
   ) {
     return 'medium';
   }
@@ -204,12 +205,15 @@ export function createErrorInfo(
   error: Error,
   errorInfo: ErrorInfo
 ): ErrorInfoType {
+  const err = error instanceof Error ? error : new Error(
+    error != null ? String(error) : 'An unexpected error occurred'
+  );
   return {
-    message: error.message,
-    stack: error.stack,
+    message: err.message,
+    stack: err.stack,
     componentStack: errorInfo.componentStack,
     timestamp: new Date(),
-    severity: determineErrorSeverity(error),
+    severity: determineErrorSeverity(err),
     isHandled: false,
   };
 }
@@ -287,10 +291,14 @@ export class GlobalErrorBoundary extends Component<
    * @param errorInfo Error information containing component stack
    * @returns New state to indicate error
    */
-  static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
+  static getDerivedStateFromError(error: unknown): Partial<ErrorBoundaryState> {
+    const err = error instanceof Error ? error : new Error(
+      error != null ? String(error) : 'An unexpected error occurred'
+    );
     return {
       hasError: true,
-      error,
+      isRecovering: false,
+      error: err,
     };
   }
 
@@ -308,8 +316,11 @@ export class GlobalErrorBoundary extends Component<
    * @param error The error that was thrown
    * @param errorInfo Error information containing component stack
    */
-  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    const errorInfoType = createErrorInfo(error, errorInfo);
+  componentDidCatch(error: unknown, errorInfo: ErrorInfo): void {
+    const err = error instanceof Error ? error : new Error(
+      error != null ? String(error) : 'An unexpected error occurred'
+    );
+    const errorInfoType = createErrorInfo(err, errorInfo);
     
     this.setState({
       errorInfo: errorInfoType,
@@ -405,18 +416,8 @@ export class GlobalErrorBoundary extends Component<
     }));
     this.setState({
       isRecovering: true,
-    });
-
-    // Small delay before retry to prevent immediate re-throw
-    setTimeout(() => {
-      this.setState((prevState) => ({
-        hasError: false,
-        error: null,
-        errorInfo: null,
-        retryCount: prevState.retryCount + 1,
-        isRecovering: false,
-      }));
-    }, 100);
+      retryCount: prevState.retryCount + 1,
+    }));
   };
 
   /**
@@ -459,7 +460,7 @@ export class GlobalErrorBoundary extends Component<
     // If there's an error, show fallback
     if (hasError) {
     // If there's an error, show fallback
-    if (this.state.hasError) {
+    if (hasError) {
       // Use custom fallback if provided
       if (this.props.fallback) {
         return this.props.fallback;
@@ -547,7 +548,6 @@ export class GlobalErrorBoundary extends Component<
             {retryCount < this.config.maxRetries && (
               <button
                 onClick={this.handleRetry}
-                disabled={isRecovering}
                 aria-label="Retry rendering the component"
                 style={{
                   padding: '0.5rem 1rem',
@@ -563,7 +563,7 @@ export class GlobalErrorBoundary extends Component<
                   opacity: isRecovering ? 0.6 : 1,
                 }}
               >
-                {isRecovering ? 'Retrying...' : 'Retry'}
+                Retry
               </button>
             )}
 
