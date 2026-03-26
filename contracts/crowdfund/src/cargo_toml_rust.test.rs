@@ -235,6 +235,9 @@ fn add_approved_dependency_success() {
         2,
         1640995200,
         false,
+        2, // security level
+        1640995200, // timestamp
+        false, // not dev-only
     );
 
     let deps = CargoTomlRust::get_approved_dependencies(env.clone());
@@ -613,6 +616,7 @@ fn run_compliance_check_all_passing() {
         String::from_str(&env, "soroban-sdk"),
         String::from_str(&env, "22.1.0"),
         2,
+        2, // within max level 3
         1640995200,
         false,
     );

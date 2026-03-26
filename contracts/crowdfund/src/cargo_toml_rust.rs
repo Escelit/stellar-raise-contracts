@@ -17,6 +17,10 @@
 //! |--------------|----------|-------------|----------------|----------|
 //! | `soroban-sdk`| `22.1.0` | workspace   | 2              | Approved |
 //! | `proptest`   | `1.5.0`  | dev only    | 1              | Approved |
+//! | Crate        | Version   | Scope       | Security Level | Status |
+//! |--------------|-----------|-------------|----------------|---------|
+//! | `soroban-sdk`| `22.1.0` | workspace   | 2              | Approved |
+//! | `proptest`   | `1.11.0`  | dev only    | 1              | Approved |
 //!
 //! ## Security Assumptions
 //!
