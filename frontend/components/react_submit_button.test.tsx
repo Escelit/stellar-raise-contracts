@@ -1759,6 +1759,7 @@ describe("ReactSubmitButton click handling", () => {
   it("does NOT fire onClick when disabled prop is true", () => {
     const onClick = jest.fn();
     const { container } = render(<ReactSubmitButton state="idle" disabled onClick={onClick} />);
+    const { container } = render(<ReactSubmitButton state="idle" disabled={true} onClick={onClick} />);
     const btn = container.querySelector("button") as HTMLButtonElement;
     fireEvent.click(btn);
     expect(onClick).not.toHaveBeenCalled();
