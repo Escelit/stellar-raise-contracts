@@ -1,14 +1,15 @@
-//! Comprehensive tests for the ContractStateSize contract.
+//! Integration tests for the `ContractStateSize` on-chain contract.
 //!
-//! @title   ContractStateSize Tests
-//! @notice  Validates each constant exposure through the contract interface and validation logic.
+//! @title   ContractStateSize Contract Interface Tests
+//! @notice  Validates that the on-chain contract correctly exposes constants
+//!          and the `validate_string` view function.
 //! @dev     Uses soroban-sdk's test utilities to mock the environment.
 
 #[cfg(test)]
 mod tests {
     use crate::contract_state_size::{
-        ContractStateSize, ContractStateSizeClient, MAX_CONTRIBUTORS, MAX_DESCRIPTION_LENGTH,
-        MAX_TITLE_LENGTH,
+        ContractStateSize, ContractStateSizeClient, MAX_CONTRIBUTORS, MAX_ROADMAP_ITEMS,
+        MAX_STRETCH_GOALS, MAX_STRING_LEN,
     };
     use soroban_sdk::{Env, String};
 
@@ -217,44 +218,32 @@ fn filled_addresses(env: &Env, count: u32) -> Vec<Address> {
     }
 
     #[test]
-    fn test_constants_return_correct_values() {
+    fn constants_are_exposed_correctly() {
         let (_env, client) = setup();
-        assert_eq!(client.max_title_length(), MAX_TITLE_LENGTH);
-        assert_eq!(client.max_description_length(), MAX_DESCRIPTION_LENGTH);
+        assert_eq!(client.max_string_len(), MAX_STRING_LEN);
         assert_eq!(client.max_contributors(), MAX_CONTRIBUTORS);
-        assert_eq!(client.max_roadmap_items(), 32);
-        assert_eq!(client.max_stretch_goals(), 32);
-        assert_eq!(client.max_social_links_length(), 512);
+        assert_eq!(client.max_roadmap_items(), MAX_ROADMAP_ITEMS);
+        assert_eq!(client.max_stretch_goals(), MAX_STRETCH_GOALS);
     }
 
     #[test]
-    fn test_validate_title() {
+    fn validate_string_accepts_empty() {
         let (env, client) = setup();
-        let valid_title = String::from_str(&env, "A valid project title");
-        let too_long_title = String::from_str(&env, &"A".repeat((MAX_TITLE_LENGTH + 1) as usize));
-
-        assert!(client.validate_title(&valid_title));
-        assert!(!client.validate_title(&too_long_title));
+        assert!(client.validate_string(&String::from_str(&env, "")));
     }
 
     #[test]
-    fn test_validate_description() {
+    fn validate_string_accepts_at_limit() {
         let (env, client) = setup();
-        let valid_desc = String::from_str(&env, "A valid project description");
-        let too_long_desc =
-            String::from_str(&env, &"A".repeat((MAX_DESCRIPTION_LENGTH + 1) as usize));
-
-        assert!(client.validate_description(&valid_desc));
-        assert!(!client.validate_description(&too_long_desc));
+        let s = String::from_str(&env, &"a".repeat(MAX_STRING_LEN as usize));
+        assert!(client.validate_string(&s));
     }
 
     #[test]
-    fn test_validate_metadata_aggregate() {
-        let (_env, client) = setup();
-        let limit = 128 + 2048 + 512;
-        assert!(client.validate_metadata_aggregate(&100));
-        assert!(client.validate_metadata_aggregate(&limit));
-        assert!(!client.validate_metadata_aggregate(&(limit + 1)));
+    fn validate_string_rejects_one_over_limit() {
+        let (env, client) = setup();
+        let s = String::from_str(&env, &"a".repeat((MAX_STRING_LEN + 1) as usize));
+        assert!(!client.validate_string(&s));
     }
     stretch_goals
 }
@@ -614,4 +603,12 @@ fn add_stretch_goal_rejects_when_capacity_full() {
     });
 
     client.add_stretch_goal(&9_999_999i128);
+
+    #[test]
+    fn constants_have_documented_values() {
+        assert_eq!(MAX_CONTRIBUTORS, 128);
+        assert_eq!(MAX_ROADMAP_ITEMS, 32);
+        assert_eq!(MAX_STRETCH_GOALS, 32);
+        assert_eq!(MAX_STRING_LEN, 256);
+    }
 }

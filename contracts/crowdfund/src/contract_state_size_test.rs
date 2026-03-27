@@ -2,13 +2,14 @@
 //!
 //! Coverage targets (≥ 95 %):
 //! - Every `check_*` helper returns `Ok` when below the limit.
-//! - Every `check_*` helper returns the correct `Err` variant exactly at the limit.
+//! - Every `check_*` helper returns the correct `StateSizeError` variant at the limit.
 //! - `check_string_len` accepts strings at the boundary and rejects strings one byte over.
 //! - Constants are set to their documented values.
 //! - All validation helpers return correct results.
 //! - Edge cases: overflow protection, boundary conditions, empty states.
 
 use soroban_sdk::{contract, contractimpl, testutils::Address as _, Address, Env, String, Vec};
+//! - Error discriminants are stable.
 
 #![cfg(test)]
 
@@ -26,6 +27,10 @@ use crate::{
         MAX_SOCIAL_LINKS_LENGTH, MAX_STRETCH_GOALS, MAX_STRING_LEN, MAX_TITLE_LENGTH,
         check_stretch_goal_limit, check_string_len, StateSizeError, MAX_CONTRIBUTORS,
         MAX_ROADMAP_ITEMS, MAX_STRETCH_GOALS, MAX_STRING_LEN,
+        check_stretch_goal_limit, check_string_len, validate_contributor_capacity,
+        validate_metadata_total_length, validate_pledger_capacity, validate_roadmap_capacity,
+        validate_stretch_goal_capacity, StateSizeError, MAX_CONTRIBUTORS, MAX_ROADMAP_ITEMS,
+        MAX_STRETCH_GOALS, MAX_STRING_LEN,
     },
     DataKey, RoadmapItem,
 };
@@ -38,9 +43,9 @@ struct TestContract;
 #[contractimpl]
 impl TestContract {}
 
-// ── helpers ───────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-fn make_env() -> (Env, soroban_sdk::Address) {
+fn make_env() -> (Env, Address) {
     let env = Env::default();
     let contract_id = env.register(TestContract, ());
     (env, contract_id)
@@ -51,6 +56,7 @@ fn make_env() -> (Env, soroban_sdk::Address) {
 fn str_of_len(env: &Env, n: u32) -> String {
     assert!(n <= 2304, "str_of_len: n too large for test helper");
 /// `n` must be ≤ 512.
+/// Build a `soroban_sdk::String` of exactly `n` ASCII 'a' bytes.
 fn str_of_len(env: &Env, n: u32) -> String {
     assert!(n <= 512, "str_of_len: n too large for test helper");
     let mut b = soroban_sdk::Bytes::new(env);
@@ -71,6 +77,7 @@ fn constants_have_expected_values() {
     assert_eq!(MAX_ROADMAP_ITEMS, 32);
     assert_eq!(MAX_STRETCH_GOALS, 32);
 // ── constant sanity checks ────────────────────────────────────────────────────
+// ── Constant sanity checks ────────────────────────────────────────────────────
 
 #[test]
 fn constants_have_expected_values() {
@@ -80,7 +87,7 @@ fn constants_have_expected_values() {
     assert_eq!(MAX_STRING_LEN, 256);
 }
 
-// ── error discriminants ───────────────────────────────────────────────────────
+// ── Error discriminants ───────────────────────────────────────────────────────
 
 #[test]
 fn error_discriminants_are_stable() {
@@ -94,7 +101,7 @@ fn error_discriminants_are_stable() {
     assert_eq!(StateSizeError::StringTooLong as u32, 103);
 }
 
-// ── check_string_len ─────────────────────────────────────────────────────────
+// ── check_string_len ──────────────────────────────────────────────────────────
 
 #[test]
 fn string_len_empty_is_ok() {
@@ -124,7 +131,112 @@ fn string_len_well_over_limit_is_err() {
     assert_eq!(check_string_len(&s), Err(StateSizeError::StringTooLong));
 }
 
-// ── check_contributor_limit ───────────────────────────────────────────────────
+// ── validate_contributor_capacity (pure) ─────────────────────────────────────
+
+#[test]
+fn validate_contributor_capacity_zero_is_ok() {
+    assert_eq!(validate_contributor_capacity(0), Ok(()));
+}
+
+#[test]
+fn validate_contributor_capacity_one_below_max_is_ok() {
+    assert_eq!(validate_contributor_capacity(MAX_CONTRIBUTORS - 1), Ok(()));
+}
+
+#[test]
+fn validate_contributor_capacity_at_max_is_err() {
+    assert_eq!(
+        validate_contributor_capacity(MAX_CONTRIBUTORS),
+        Err(StateSizeError::ContributorLimitExceeded)
+    );
+}
+
+#[test]
+fn validate_contributor_capacity_over_max_is_err() {
+    assert_eq!(
+        validate_contributor_capacity(MAX_CONTRIBUTORS + 10),
+        Err(StateSizeError::ContributorLimitExceeded)
+    );
+}
+
+// ── validate_pledger_capacity (pure) ─────────────────────────────────────────
+
+#[test]
+fn validate_pledger_capacity_zero_is_ok() {
+    assert_eq!(validate_pledger_capacity(0), Ok(()));
+}
+
+#[test]
+fn validate_pledger_capacity_at_max_is_err() {
+    assert_eq!(
+        validate_pledger_capacity(MAX_CONTRIBUTORS),
+        Err(StateSizeError::ContributorLimitExceeded)
+    );
+}
+
+// ── validate_roadmap_capacity (pure) ─────────────────────────────────────────
+
+#[test]
+fn validate_roadmap_capacity_zero_is_ok() {
+    assert_eq!(validate_roadmap_capacity(0), Ok(()));
+}
+
+#[test]
+fn validate_roadmap_capacity_one_below_max_is_ok() {
+    assert_eq!(validate_roadmap_capacity(MAX_ROADMAP_ITEMS - 1), Ok(()));
+}
+
+#[test]
+fn validate_roadmap_capacity_at_max_is_err() {
+    assert_eq!(
+        validate_roadmap_capacity(MAX_ROADMAP_ITEMS),
+        Err(StateSizeError::RoadmapLimitExceeded)
+    );
+}
+
+// ── validate_stretch_goal_capacity (pure) ────────────────────────────────────
+
+#[test]
+fn validate_stretch_goal_capacity_zero_is_ok() {
+    assert_eq!(validate_stretch_goal_capacity(0), Ok(()));
+}
+
+#[test]
+fn validate_stretch_goal_capacity_one_below_max_is_ok() {
+    assert_eq!(validate_stretch_goal_capacity(MAX_STRETCH_GOALS - 1), Ok(()));
+}
+
+#[test]
+fn validate_stretch_goal_capacity_at_max_is_err() {
+    assert_eq!(
+        validate_stretch_goal_capacity(MAX_STRETCH_GOALS),
+        Err(StateSizeError::StretchGoalLimitExceeded)
+    );
+}
+
+// ── validate_metadata_total_length (pure) ────────────────────────────────────
+
+#[test]
+fn metadata_total_length_all_zero_is_ok() {
+    assert_eq!(validate_metadata_total_length(0, 0, 0), Ok(()));
+}
+
+#[test]
+fn metadata_total_length_at_aggregate_limit_is_ok() {
+    let limit = MAX_STRING_LEN;
+    assert_eq!(validate_metadata_total_length(limit, limit, limit), Ok(()));
+}
+
+#[test]
+fn metadata_total_length_one_over_aggregate_limit_is_err() {
+    let limit = MAX_STRING_LEN;
+    assert_eq!(
+        validate_metadata_total_length(limit, limit, limit + 1),
+        Err(StateSizeError::StringTooLong)
+    );
+}
+
+// ── check_contributor_limit (storage-backed) ─────────────────────────────────
 
 #[test]
 fn contributor_limit_empty_list_is_ok() {
@@ -185,7 +297,7 @@ fn contributor_limit_over_max_is_err() {
     });
 }
 
-// ── check_pledger_limit ───────────────────────────────────────────────────────
+// ── check_pledger_limit (storage-backed) ─────────────────────────────────────
 
 #[test]
 fn pledger_limit_empty_list_is_ok() {
@@ -228,7 +340,23 @@ fn pledger_limit_at_max_is_err() {
     });
 }
 
-// ── check_roadmap_limit ───────────────────────────────────────────────────────
+#[test]
+fn pledger_limit_over_max_is_err() {
+    let (env, contract_id) = make_env();
+    env.as_contract(&contract_id, || {
+        let mut list: Vec<Address> = Vec::new(&env);
+        for _ in 0..MAX_CONTRIBUTORS + 3 {
+            list.push_back(Address::generate(&env));
+        }
+        env.storage().persistent().set(&DataKey::Pledgers, &list);
+        assert_eq!(
+            check_pledger_limit(&env),
+            Err(StateSizeError::ContributorLimitExceeded)
+        );
+    });
+}
+
+// ── check_roadmap_limit (storage-backed) ─────────────────────────────────────
 
 #[test]
 fn roadmap_limit_empty_list_is_ok() {
@@ -273,7 +401,26 @@ fn roadmap_limit_at_max_is_err() {
     });
 }
 
-// ── check_stretch_goal_limit ──────────────────────────────────────────────────
+#[test]
+fn roadmap_limit_over_max_is_err() {
+    let (env, contract_id) = make_env();
+    env.as_contract(&contract_id, || {
+        let mut list: Vec<RoadmapItem> = Vec::new(&env);
+        for i in 0..MAX_ROADMAP_ITEMS + 2 {
+            list.push_back(RoadmapItem {
+                date: 1_000_000 + i as u64,
+                description: String::from_str(&env, "milestone"),
+            });
+        }
+        env.storage().instance().set(&DataKey::Roadmap, &list);
+        assert_eq!(
+            check_roadmap_limit(&env),
+            Err(StateSizeError::RoadmapLimitExceeded)
+        );
+    });
+}
+
+// ── check_stretch_goal_limit (storage-backed) ────────────────────────────────
 
 #[test]
 fn stretch_goal_limit_empty_list_is_ok() {
@@ -697,4 +844,18 @@ fn error_discriminants_are_unique() {
         StateSizeError::StringTooLong as u32,
         StateSizeError::MetadataTotalExceeded as u32
     );
+#[test]
+fn stretch_goal_limit_over_max_is_err() {
+    let (env, contract_id) = make_env();
+    env.as_contract(&contract_id, || {
+        let mut list: Vec<i128> = Vec::new(&env);
+        for i in 0..MAX_STRETCH_GOALS + 4 {
+            list.push_back(1_000 * (i as i128 + 1));
+        }
+        env.storage().instance().set(&DataKey::StretchGoals, &list);
+        assert_eq!(
+            check_stretch_goal_limit(&env),
+            Err(StateSizeError::StretchGoalLimitExceeded)
+        );
+    });
 }
