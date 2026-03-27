@@ -85,6 +85,7 @@ mod refund_single_tests {
             &None,   // platform_config
             &None,   // bonus_goal
             &None,   // bonus_goal_description
+            &None,   // metadata_uri
         );
     }
 
@@ -316,6 +317,7 @@ mod refund_single_tests {
 
         let token_client = token::Client::new(&env, &token_address);
 
+        client.finalize(); // Active → Expired
         client.refund();
 
         // All contributors must have their tokens back
@@ -327,7 +329,7 @@ mod refund_single_tests {
 
     /// @test Bulk refund() cannot be called twice (status guard).
     #[test]
-    #[should_panic(expected = "campaign is not active")]
+    #[should_panic(expected = "campaign must be in Expired state to refund")]
     fn test_bulk_refund_cannot_be_called_twice() {
         let (env, client, creator, token_address, admin) = setup();
         let deadline = env.ledger().timestamp() + 3_600;
@@ -338,8 +340,9 @@ mod refund_single_tests {
         client.contribute(&alice, &100_000);
 
         env.ledger().set_timestamp(deadline + 1);
+        client.finalize(); // Active → Expired
         client.refund();
-        client.refund(); // must panic — status is Refunded
+        client.refund(); // must panic — already Expired, not Active
     }
 
     /// @test refund() is blocked while the campaign is still active (before deadline).
@@ -353,12 +356,12 @@ mod refund_single_tests {
         mint(&env, &token_address, &alice, 100_000);
         client.contribute(&alice, &100_000);
 
-        // Do NOT advance past deadline
+        // Do NOT advance past deadline — campaign is Active, refund panics
         let result = client.try_refund();
         assert!(result.is_err());
     }
 
-    /// @test refund() is blocked when the goal has been reached.
+    /// @test refund() is blocked when the goal has been reached (Succeeded state).
     #[test]
     fn test_refund_blocked_when_goal_reached() {
         let (env, client, creator, token_address, admin) = setup();
@@ -371,9 +374,10 @@ mod refund_single_tests {
         client.contribute(&alice, &goal);
 
         env.ledger().set_timestamp(deadline + 1);
+        client.finalize(); // Active → Succeeded
 
         let result = client.try_refund();
-        assert!(result.is_err()); // GoalReached error
+        assert!(result.is_err()); // panics — not Expired
     }
 
     // ── get_contribution helper ───────────────────────────────────────────────

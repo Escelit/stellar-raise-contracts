@@ -1,196 +1,89 @@
-# `contract_state_size` — Bounded Contract State for Reviewability and Reliability
+# Contract State Size Limits
 
-## Overview
+The `contract_state_size` module defines the maximum size limits for all
+campaign-related on-chain state and provides guard functions that return typed
+errors when those limits are exceeded.
 
-`contract_state_size` centralizes the limits for every crowdfund state field
-whose size can grow from user input. The goal is to make worst-case storage
-growth explicit, auditable, and enforceable in both local development and
-CI/CD.
+## Why limits matter
 
-The module introduces pure validation helpers and wires them into the
-contract's state-mutating entrypoints so oversize writes are rejected before
-they are persisted.
+Storing data on the Stellar ledger involves costs based on both the number of
+entries and their byte content (state rent). Enforcing these limits at every
+write:
 
-## Why this matters
+- **Prevents ledger bloat** — caps entry sizes so state-rent stays predictable.
+- **Enables frontend validation** — the UI can query constants to pre-validate
+  inputs before submitting a transaction, reducing reverts.
+- **Bounds collection growth** — prevents runaway storage from unbounded
+  contributor, roadmap, or stretch-goal lists.
 
-Without explicit bounds, a campaign can accumulate:
-
-- Very large metadata strings (title, description, social links)
-- Extremely long contributor or pledger indexes
-- Unbounded roadmap entries
-- Unbounded stretch-goal lists
-
-That makes the contract harder to review, increases state- and payload-size
-variance across environments, and weakens our confidence in worst-case
-behavior during CI.
-
-## Limits
+## Constants
 
 | Constant | Value | Purpose |
-|----------|-------|---------|
-| `MAX_CONTRIBUTORS` | `128` | Max indexed contributor addresses |
-| `MAX_PLEDGERS` | `128` | Max indexed pledger addresses |
-| `MAX_ROADMAP_ITEMS` | `32` | Max roadmap entries |
-| `MAX_STRETCH_GOALS` | `32` | Max stretch-goal milestones |
-| `MAX_TITLE_LENGTH` | `128` bytes | Max campaign title size |
-| `MAX_DESCRIPTION_LENGTH` | `2048` bytes | Max campaign description size |
-| `MAX_SOCIAL_LINKS_LENGTH` | `512` bytes | Max social-links field size |
-| `MAX_BONUS_GOAL_DESCRIPTION_LENGTH` | `280` bytes | Max bonus-goal description size |
-| `MAX_ROADMAP_DESCRIPTION_LENGTH` | `280` bytes | Max roadmap-item description size |
-| `MAX_METADATA_TOTAL_LENGTH` | `2688` bytes | Combined title + description + socials budget |
+|---|---|---|
+| `MAX_STRING_LEN` | 256 bytes | Shared limit for all string fields |
+| `MAX_CONTRIBUTORS` | 128 | Max entries in `Contributors` / `Pledgers` lists |
+| `MAX_ROADMAP_ITEMS` | 32 | Max entries in the `Roadmap` list |
+| `MAX_STRETCH_GOALS` | 32 | Max entries in the `StretchGoals` list |
+| `MAX_TITLE_LENGTH` | 256 bytes | Alias for `MAX_STRING_LEN` |
+| `MAX_DESCRIPTION_LENGTH` | 256 bytes | Alias for `MAX_STRING_LEN` |
 
-### Design Rationale
+## Error type
 
-- **Contributor/Pledger limits (128)**: Keeps `withdraw`/`refund`/`collect_pledges` 
-  iteration within Soroban gas limits while supporting reasonable campaign sizes.
-- **Roadmap/StretchGoal limits (32)**: Reasonable bounds for roadmap items and 
-  milestone tracking without operational iteration requirements.
-- **Metadata limits**: Individual fields have reasonable sizes; total budget (2688 bytes) 
-  prevents fragmented metadata from collectively exceeding storage budget.
-- **Description limits (280)**: Twitter-length descriptions encourage concise content 
-  and prevent oversized entries.
+`StateSizeError` is a `#[contracterror]` enum with stable discriminants:
 
-## Validation Helpers
+| Variant | Discriminant | Meaning |
+|---|---|---|
+| `ContributorLimitExceeded` | 100 | Contributors or pledgers list is full |
+| `RoadmapLimitExceeded` | 101 | Roadmap list is full |
+| `StretchGoalLimitExceeded` | 102 | Stretch goals list is full |
+| `StringTooLong` | 103 | A string field exceeds `MAX_STRING_LEN` |
 
-The module exposes pure helpers that return `Result<(), &'static str>` for
-both contract code and tests to reuse:
+Discriminants are part of the on-chain ABI and must not be renumbered.
 
-### String Validators
+## Guard functions
 
-- `validate_title(title: &String)` — Ensures title ≤ MAX_TITLE_LENGTH
-- `validate_description(desc: &String)` — Ensures description ≤ MAX_DESCRIPTION_LENGTH
-- `validate_social_links(socials: &String)` — Ensures social links ≤ MAX_SOCIAL_LINKS_LENGTH
-- `validate_bonus_goal_description(desc: &String)` — Ensures ≤ MAX_BONUS_GOAL_DESCRIPTION_LENGTH
-- `validate_roadmap_description(desc: &String)` — Ensures ≤ MAX_ROADMAP_DESCRIPTION_LENGTH
+### Storage-aware guards (require `&Env`)
 
-### Capacity Validators
+| Function | Storage key | Error on |
+|---|---|---|
+| `check_contributor_limit(env)` | `DataKey::Contributors` (persistent) | `len >= MAX_CONTRIBUTORS` |
+| `check_pledger_limit(env)` | `DataKey::Pledgers` (persistent) | `len >= MAX_CONTRIBUTORS` |
+| `check_roadmap_limit(env)` | `DataKey::Roadmap` (instance) | `len >= MAX_ROADMAP_ITEMS` |
+| `check_stretch_goal_limit(env)` | `DataKey::StretchGoals` (instance) | `len >= MAX_STRETCH_GOALS` |
 
-- `validate_contributor_capacity(current_count: u32)` — Checks against MAX_CONTRIBUTORS
-- `validate_pledger_capacity(current_count: u32)` — Checks against MAX_PLEDGERS
-- `validate_roadmap_capacity(env: &Env)` — Reads roadmap from storage, checks against MAX_ROADMAP_ITEMS
-- `validate_stretch_goal_capacity(env: &Env)` — Reads stretch goals from storage, checks against MAX_STRETCH_GOALS
+### Pure guards (no `Env` required)
 
-### Aggregate Validators
+| Function | Error on |
+|---|---|
+| `check_string_len(s)` | `s.len() > MAX_STRING_LEN` |
+| `validate_title(s)` | delegates to `check_string_len` |
+| `validate_description(s)` | delegates to `check_string_len` |
+| `validate_social_links(s)` | delegates to `check_string_len` |
+| `validate_roadmap_description(s)` | delegates to `check_string_len` |
+| `validate_bonus_goal_description(s)` | delegates to `check_string_len` |
+| `validate_contributor_capacity(count)` | `count >= MAX_CONTRIBUTORS` |
+| `validate_pledger_capacity(count)` | `count >= MAX_CONTRIBUTORS` |
+| `validate_roadmap_capacity(count)` | `count >= MAX_ROADMAP_ITEMS` |
+| `validate_stretch_goal_capacity(count)` | `count >= MAX_STRETCH_GOALS` |
+| `validate_metadata_total_length(title, desc, socials)` | combined > aggregate limit |
 
-- `validate_metadata_total_length(title_len, desc_len, socials_len)` — Uses checked arithmetic 
-  to prevent overflow and validates combined length ≤ MAX_METADATA_TOTAL_LENGTH
+## Queryable contract
 
-### Storage Check Helpers
+`ContractStateSize` is a standalone Soroban contract that exposes the constants
+over the ABI. The frontend can call it to retrieve limits without off-chain
+configuration.
 
-These read from persistent storage and return `StateSizeError`:
-
-- `check_contributor_limit(env: &Env)` — Reads contributors Vec from storage
-- `check_pledger_limit(env: &Env)` — Reads pledgers Vec from storage
-- `check_roadmap_limit(env: &Env)` — Reads roadmap Vec from storage
-- `check_stretch_goal_limit(env: &Env)` — Reads stretch goals Vec from storage
-
-## Contract Integration
-
-The following entrypoints enforce state-size limits:
-
-### `initialize`
-
-- Validates `bonus_goal_description` before storing it (≤ 280 bytes)
-
-### `contribute`
-
-- Rejects a contribution that would add a new address beyond `MAX_CONTRIBUTORS`
-- Existing contributors can still contribute even when the contributor index is full
-
-### `pledge`
-
-- Rejects a pledge that would add a new address beyond `MAX_PLEDGERS`
-
-### `update_metadata`
-
-- Validates individual field lengths for `title` (≤ 128), `description` (≤ 2048), and `socials` (≤ 512)
-- Validates combined metadata footprint using `validate_metadata_total_length`
-- Uses checked arithmetic to prevent overflow attacks
-
-### `add_roadmap_item`
-
-- Rejects new entries once `MAX_ROADMAP_ITEMS` (32) is reached
-- Rejects oversized roadmap descriptions (> 280 bytes)
-
-### `add_stretch_goal`
-
-- Rejects new milestones once `MAX_STRETCH_GOALS` (32) is reached
-
-## Security Assumptions
-
-1. **State bloat prevention**: Bounding collection growth prevents DoS attacks via 
-   unbounded contributor/pledger/roadmap/stretch-goal lists.
-2. **Rejection before persistence**: Oversized writes are rejected before persisting, 
-   preventing silent storage bloat.
-3. **Iteration safety**: Limiting indexed address lists reduces risk in flows that 
-   iterate over those lists (withdraw, refund, collect_pledges).
-4. **Metadata budget**: Combined metadata budget (2688 bytes) prevents campaigns from 
-   storing several individually-valid but collectively excessive fields.
-5. **Existing participant protection**: Contributor and pledger limits apply only to 
-   new index growth; existing participants are never locked out.
-6. **Overflow protection**: All aggregate length calculations use checked arithmetic 
-   to prevent integer overflow attacks.
-
-## Error Types
-
-```rust
-pub enum StateSizeError {
-    ContributorLimitExceeded = 100,  // Contributors list full
-    PledgerLimitExceeded = 101,       // Pledgers list full
-    RoadmapLimitExceeded = 102,      // Roadmap list full
-    StretchGoalLimitExceeded = 103,  // Stretch goals list full
-    StringTooLong = 104,             // String exceeds byte limit
-    MetadataTotalExceeded = 105,     // Combined metadata exceeds budget
-}
+```bash
+stellar contract invoke --id <CONTRACT_ID> --network testnet -- max_title_length
+stellar contract invoke --id <CONTRACT_ID> --network testnet -- max_contributors
 ```
 
-## NatSpec-Style Documentation
+## Security notes
 
-Every public constant and validation function includes NatSpec-style comments:
-
-- `@param` for parameter descriptions
-- `@return` for return value descriptions
-- `@notice` for important behavioral notes
-
-This keeps the rules close to the code and aids future audits.
-
-## Test Coverage
-
-See [`contract_state_size.test.rs`](./contract_state_size.test.rs).
-
-The dedicated test suite covers:
-
-### Pure Helper Tests
-
-- Constant stability verification
-- Exact-boundary acceptance for all string limits
-- Rejection one byte over each limit
-- Overflow-safe aggregate length validation
-- Collection-capacity acceptance at boundary
-- Collection-capacity rejection at limit
-
-### Contract Wiring Tests
-
-- `initialize` accepts bonus goal description at exact limit
-- `initialize` rejects oversized bonus goal description
-- `update_metadata` accepts exact total budget
-- `update_metadata` rejects total metadata over budget
-- `contribute` rejects new contributor when index full
-- `contribute` allows existing contributor when index full
-- `pledge` rejects new pledger when index full
-- `add_roadmap_item` rejects oversized description
-- `add_roadmap_item` rejects when capacity full
-- `add_stretch_goal` rejects when capacity full
-
-## Review Notes
-
-This implementation is intentionally small and focused:
-
-- All limits live in one well-documented file
-- Enforcement points are narrow and explicit
-- Tests exercise both pure helpers and real contract calls
-- Error messages are stable and searchable in logs
-- Overflow protection is built into aggregate calculations
-
-That keeps the change efficient to review while improving reliability and 
-reducing unbounded-state risk.
+- All limits are enforced at write time in `lib.rs` and
+  `crowdfund_initialize_function.rs` — they cannot be bypassed by a caller.
+- Error discriminants are stable; changing them would break existing clients
+  that pattern-match on the numeric value.
+- The `validate_metadata_total_length` guard uses `saturating_add` to prevent
+  integer overflow when summing field lengths.
+- No secrets or credentials are stored or referenced in this module.

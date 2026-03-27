@@ -1,49 +1,78 @@
-//! # `refund_single` Token Transfer Logic
-//!
-//! This module centralises every piece of logic needed to execute a single
-//! pull-based contributor refund:
-//!
-//! - **`validate_refund_preconditions`** — pure guard that checks campaign
-//!   status, deadline, goal, and contribution balance before any state change.
-//! - **`execute_refund_single`** — atomic CEI (Checks-Effects-Interactions)
-//!   execution: zero storage first, then transfer, then emit event.
-//! - **`refund_single_transfer`** — thin wrapper around `token::Client::transfer`
-//!   that fixes the direction (contract → contributor) to prevent parameter-order
-//!   typos at call sites.
-//!
-//! ## Security Assumptions
-//!
-//! 1. **Authentication** is the caller's responsibility (`contributor.require_auth()`
-//!    must be called before `execute_refund_single`).
-//! 2. **CEI order** — storage is zeroed *before* the token transfer so that a
-//!    re-entrant call from the token contract cannot double-claim.
-//! 3. **Overflow protection** — `total_raised` is decremented with `checked_sub`;
-//!    the function returns `ContractError::Overflow` rather than wrapping.
-//! 4. **Direction lock** — `refund_single_transfer` always transfers
-//!    `contract → contributor`; the direction cannot be reversed by a caller.
-
-#![allow(missing_docs)]
+// # `refund_single` Token Transfer Logic
+//
+// This module centralises every piece of logic needed to execute a single
+// pull-based contributor refund:
+//
+// - **`validate_refund_preconditions`** — pure guard that checks campaign
+//   status, deadline, goal, and contribution balance before any state change.
+// - **`execute_refund_single`** — atomic CEI (Checks-Effects-Interactions)
+//   execution: zero storage first, then transfer, then emit event.
+//
+// ## Security Assumptions
+//
+// 1. **Authentication** is the caller's responsibility (`contributor.require_auth()`
+//    must be called before `execute_refund_single`).
+// 2. **CEI order** — storage is zeroed *before* the token transfer so that a
+//    re-entrant call from the token contract cannot double-claim.
+// 3. **Overflow protection** — `total_raised` is decremented with `checked_sub`;
+//    the function returns `ContractError::Overflow` rather than wrapping.
+// 4. **Direction lock** — The token transfer explicitly uses the contract's
+//    address as the sender and the contributor as the recipient.
 
 use soroban_sdk::{token, Address, Env};
 
 use crate::{ContractError, DataKey, Status};
 
+// ── Storage helpers ───────────────────────────────────────────────────────────
+
+/// Read the stored contribution amount for `contributor` (0 if absent).
+pub fn get_contribution(env: &Env, contributor: &Address) -> i128 {
+    env.storage()
+        .persistent()
+        .get(&DataKey::Contribution(contributor.clone()))
+        .unwrap_or(0)
+}
+
+/// Low-level refund helper: transfer `amount` from contract to `contributor`
+/// and zero the contribution record. Returns the amount transferred.
+///
+/// Does **not** check campaign status or auth — callers are responsible.
+pub fn refund_single(env: &Env, token_address: &Address, contributor: &Address) -> i128 {
+    let amount = get_contribution(env, contributor);
+    if amount > 0 {
+        env.storage()
+            .persistent()
+            .set(&DataKey::Contribution(contributor.clone()), &0i128);
+        let token_client = token::Client::new(env, token_address);
+        refund_single_transfer(
+            &token_client,
+            &env.current_contract_address(),
+            contributor,
+            amount,
+        );
+    }
+    amount
+}
+
 // ── Transfer primitive ────────────────────────────────────────────────────────
 
 /// Transfer `amount` tokens from the contract to `contributor`.
 ///
-/// @notice Direction is fixed: contract → contributor.
-/// @dev    Single call site prevents parameter-order typos.
-/// @param token_client Pre-built token client.
-/// @param contract_address The crowdfund contract's own address.
-/// @param contributor Recipient of the refund.
-/// @param amount Token amount to transfer (must be > 0).
+/// Direction is fixed: contract → contributor.
+/// Single call site prevents parameter-order typos.
 pub fn refund_single_transfer(
     token_client: &token::Client,
     contract_address: &Address,
     contributor: &Address,
     amount: i128,
 ) {
+    if amount <= 0 {
+        return;
+    }
+    token_client.env().events().publish(
+        ("debug", "refund_transfer_attempt"),
+        (contributor.clone(), amount),
+    );
     token_client.transfer(contract_address, contributor, &amount);
 }
 
@@ -54,40 +83,20 @@ pub fn refund_single_transfer(
 /// Returns the contribution amount owed to `contributor` on success, or the
 /// appropriate `ContractError` variant on failure.
 ///
-/// @notice Does **not** mutate any state — safe to call speculatively.
-/// @param env Soroban environment.
-/// @param contributor The address requesting a refund.
-/// @return `Ok(amount)` when the refund is valid, `Err(ContractError)` otherwise.
+/// Does **not** mutate any state — safe to call speculatively.
 ///
 /// # Errors
-/// * `ContractError::CampaignStillActive` — deadline has not yet passed.
-/// * `ContractError::GoalReached`         — goal was met; no refunds available.
-/// * `ContractError::NothingToRefund`     — contributor has no balance on record.
+/// * `ContractError::NothingToRefund` — contributor has no balance on record.
 ///
 /// # Panics
-/// * `"campaign is not active"` when status is `Successful` or `Cancelled`.
+/// * When campaign status is not `Expired`.
 pub fn validate_refund_preconditions(
     env: &Env,
     contributor: &Address,
 ) -> Result<i128, ContractError> {
     let status: Status = env.storage().instance().get(&DataKey::Status).unwrap();
-    if status == Status::Successful || status == Status::Cancelled {
-        panic!("campaign is not active");
-    }
-
-    let deadline: u64 = env.storage().instance().get(&DataKey::Deadline).unwrap();
-    if env.ledger().timestamp() <= deadline {
-        return Err(ContractError::CampaignStillActive);
-    }
-
-    let goal: i128 = env.storage().instance().get(&DataKey::Goal).unwrap();
-    let total: i128 = env
-        .storage()
-        .instance()
-        .get(&DataKey::TotalRaised)
-        .unwrap_or(0);
-    if total >= goal {
-        return Err(ContractError::GoalReached);
+    if status != Status::Expired {
+        panic!("campaign must be in Expired state to refund");
     }
 
     let amount: i128 = env
@@ -109,11 +118,10 @@ pub fn validate_refund_preconditions(
 /// Caller **must** have already called `contributor.require_auth()` and
 /// `validate_refund_preconditions` (or be certain preconditions hold).
 ///
-/// @notice Storage is zeroed **before** the token transfer (CEI).
-/// @param env Soroban environment.
-/// @param contributor The address to refund.
-/// @param amount The amount returned by `validate_refund_preconditions`.
-/// @return `Ok(())` on success, `Err(ContractError::Overflow)` on underflow.
+/// Storage is zeroed **before** the token transfer (CEI).
+///
+/// # Errors
+/// * `ContractError::Overflow` — underflow when decrementing `TotalRaised`.
 pub fn execute_refund_single(
     env: &Env,
     contributor: &Address,
@@ -121,7 +129,7 @@ pub fn execute_refund_single(
 ) -> Result<(), ContractError> {
     let contribution_key = DataKey::Contribution(contributor.clone());
 
-    // ── Effects (zero storage before transfer) ────────────────────────────
+    // Effects: zero storage before transfer
     env.storage().persistent().set(&contribution_key, &0i128);
     env.storage()
         .persistent()
@@ -137,15 +145,10 @@ pub fn execute_refund_single(
         .instance()
         .set(&DataKey::TotalRaised, &new_total);
 
-    // ── Interactions (transfer after state is settled) ────────────────────
+    // Interactions: transfer after state is settled
     let token_address: Address = env.storage().instance().get(&DataKey::Token).unwrap();
     let token_client = token::Client::new(env, &token_address);
-    refund_single_transfer(
-        &token_client,
-        &env.current_contract_address(),
-        contributor,
-        amount,
-    );
+    token_client.transfer(&env.current_contract_address(), contributor, &amount);
 
     env.events()
         .publish(("campaign", "refund_single"), (contributor.clone(), amount));

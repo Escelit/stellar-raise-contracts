@@ -14,13 +14,15 @@ Thumbs.db
 .DS_Store?
 ._*
 
-# Soroban / Rust
+# Soroban / Stellar
+.soroban/
 *.d
 *.wasm
 !contracts/factory/wasm/crowdfund.wasm
 
-# Kiro
-.kiro/
+# Kiro (local settings only, specs are tracked)
+.kiro/settings/
+.kiro/hooks/
 
 # Test artifacts
 contracts/*/test_snapshots/

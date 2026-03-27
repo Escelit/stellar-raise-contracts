@@ -253,6 +253,7 @@ try {
 - **User-Friendly Messages**: Technical errors translated to user-understandable language
 - **Actionable Guidance**: Clear instructions for resolving common issues
 - **Security Boundaries**: Prevents sensitive contract data exposure
+- **Dismiss Action**: The `handleDismiss` method resets error state and re-renders children. Use with caution — it does not resolve the underlying error and should only be offered when the error is known to be transient.
 
 ---
 

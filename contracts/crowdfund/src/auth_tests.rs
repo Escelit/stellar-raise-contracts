@@ -55,6 +55,10 @@ fn test_initialize_requires_creator_auth() {
         &None,
         &None,
         &None,
+        &None,
+        &None,
+        &None,
+        &None,
     );
 
     assert_eq!(client.goal(), 1_000_000);
@@ -80,6 +84,10 @@ fn test_withdraw_only_creator_can_withdraw() {
         &None,
         &None,
         &None,
+        &None,
+        &None,
+        &None,
+        &None,
     );
 
     let contributor = Address::generate(&env);
@@ -87,6 +95,7 @@ fn test_withdraw_only_creator_can_withdraw() {
     client.contribute(&contributor, &goal);
 
     env.ledger().set_timestamp(deadline + 1);
+    client.finalize();
     client.withdraw();
 
     assert_eq!(client.total_raised(), 0);
@@ -109,6 +118,10 @@ fn test_contribute_requires_own_auth() {
         &1_000_000,
         &deadline,
         &1_000,
+        &None,
+        &None,
+        &None,
+        &None,
         &None,
         &None,
         &None,

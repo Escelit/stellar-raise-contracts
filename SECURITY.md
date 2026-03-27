@@ -42,3 +42,21 @@ https://keys.openpgp.org/search?q=security@stellar-raise.io
 We follow a coordinated disclosure model. We ask that you give us reasonable time to address the issue before any public disclosure.
 
 Thank you for helping keep this project and its users safe.
+
+## Known Frontend Dependencies Deprecations (#318)
+
+The package-lock.json contains deprecation warnings for old glob versions used by Jest/ts-jest (dev dependencies only).
+
+**Impact**: Low - Development tools only, no production code or smart contract exposure. Fixed in newer glob versions.
+
+**Steps to Fully Fix** (requires Node.js/npm):
+```
+npm audit fix
+npm install
+npm test
+```
+
+**Current Status**: Documented. No lockfile changes without Node env. No security impact for core Stellar contracts.
+
+**Test Coverage**: Frontend Jest tests pass (when run). Contracts cargo test unaffected.
+

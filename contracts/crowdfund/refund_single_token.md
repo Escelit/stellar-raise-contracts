@@ -3,13 +3,14 @@
 ## Overview
 
 The `refund_single_token` module centralises all logic for executing a single
-contributor refund. It exposes three public items:
+contributor refund. It exposes four public items:
 
 | Symbol                        | Purpose                                                  |
 |-------------------------------|----------------------------------------------------------|
 | `refund_single_transfer`      | Direction-locked token transfer (contract → contributor) |
 | `validate_refund_preconditions` | Pure guard — checks all preconditions, returns amount  |
 | `execute_refund_single`       | Atomic CEI execution — zero storage, then transfer       |
+| `refund_available`            | View function — checks if refund is available for UI     |
 
 The `refund_single` contract method in `lib.rs` is now a three-line wrapper:
 
@@ -21,6 +22,14 @@ pub fn refund_single(env: Env, contributor: Address) -> Result<(), ContractError
 }
 ```
 
+The `refund_available` view function allows frontend UI to check refund status:
+
+```rust
+pub fn refund_available(env: Env, contributor: Address) -> Result<i128, ContractError> {
+    validate_refund_preconditions(&env, &contributor)
+}
+```
+
 ---
 
 ## Why pull-based?
@@ -28,9 +37,13 @@ pub fn refund_single(env: Env, contributor: Address) -> Result<(), ContractError
 The deprecated `refund()` iterated over every contributor in one transaction.
 With many contributors this is unsafe:
 
+
+If the contributor has `0` stored contribution, `refund_single_transfer` helper skips the transfer (gas optimization) and returns `Ok(())`.
+
 - **Unbounded gas** — iteration cost grows linearly with contributor count.
 - **DoS** — a single bad actor can bloat the list to make the batch prohibitively expensive.
 - **Poor composability** — scripts cannot easily retry partial failures.
+
 
 `refund_single` processes exactly one contributor per call, so gas costs are
 constant and predictable regardless of campaign size.
@@ -49,6 +62,18 @@ calling `refund_single_transfer`. This prevents re-entrancy: even if the token
 contract calls back into the crowdfund contract, the contribution is already 0
 and `validate_refund_preconditions` will return `NothingToRefund`.
 
+5. **Zero-amount optimization**  
+   `refund_single_transfer` skips transfers where `amount <= 0`, preventing no-op gas waste.
+
+6. **Debug logging**  
+   Emits `("debug", "refund_transfer_attempt") (contributor, amount)` before successful transfers for observability.
+
+
+## Test coverage
+
+`refund_single_token.test.rs` + `refund_single_token_security_tests.rs` cover:
+
+
 ```
 validate_refund_preconditions  ← pure read, no state change
     ↓
@@ -62,6 +87,7 @@ execute_refund_single
 `refund_single_transfer` always transfers `contract → contributor`. The
 direction cannot be reversed by a caller because the parameters are positional
 and the function signature enforces the order.
+
 
 ### 4. Overflow protection
 `execute_refund_single` decrements `total_raised` with `checked_sub`, returning
@@ -110,6 +136,18 @@ Returns `Ok(amount)` when all preconditions pass, or the appropriate error.
 | `ContractError::NothingToRefund` | Contribution record is 0 or absent           |
 
 Panics with `"campaign is not active"` when status is `Successful` or `Cancelled`.
+
+---
+
+### `refund_available`
+
+```rust
+pub fn refund_available(env: Env, contributor: Address) -> Result<i128, ContractError>
+```
+
+View function that checks if a refund is available for the given contributor.
+Returns the refundable amount if available, or the appropriate error.
+Safe to call without authentication; useful for frontend UI to show refund status.
 
 ---
 
@@ -187,3 +225,4 @@ Tests cover:
 - Double-refund prevention
 - Large amounts (overflow protection)
 - Multi-contributor isolation
+- `refund_available` view function for UI state

@@ -708,4 +708,44 @@ describe('Security Considerations', () => {
     // Error message should be displayed
     expect(screen.getByText(/Token:/)).toBeInTheDocument();
   });
+
+  it('dismiss button is labelled correctly (aria-label)', () => {
+    render(
+      <GlobalErrorBoundary>
+        <ThrowError />
+      </GlobalErrorBoundary>
+    );
+    const dismissBtn = screen.getByRole('button', { name: /dismiss error/i });
+    expect(dismissBtn).toBeTruthy();
+    expect(dismissBtn.getAttribute('aria-label')).toBe(
+      'Dismiss error and try to continue',
+    );
+  });
+
+  it('clicking Dismiss resets error state and re-renders children', () => {
+    let shouldThrow = true;
+    const Recoverable = () => {
+      if (shouldThrow) throw new Error('dismissable error');
+      return <div>Dismissed OK</div>;
+    };
+    render(
+      <GlobalErrorBoundary>
+        <Recoverable />
+      </GlobalErrorBoundary>
+    );
+    expect(screen.getByText('Something went wrong')).toBeTruthy();
+    shouldThrow = false;
+    fireEvent.click(screen.getByRole('button', { name: /dismiss error/i }));
+    expect(screen.getByText('Dismissed OK')).toBeTruthy();
+  });
+
+  it('dismiss action does not expose stack trace to the DOM', () => {
+    render(
+      <GlobalErrorBoundary config={{ showErrorDetails: false }}>
+        <ThrowError />
+      </GlobalErrorBoundary>
+    );
+    // pre element (stack trace) must not be present
+    expect(document.querySelector('pre')).toBeNull();
+  });
 });

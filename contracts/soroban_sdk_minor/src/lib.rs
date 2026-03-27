@@ -1,6 +1,6 @@
 #![no_std]
 
-use soroban_sdk::{contract, contractimpl, contracttype, Address, Env};
+use soroban_sdk::{contract, contractimpl, contracttype, Address, Env, Symbol};
 
 /// Storage key for the admin address.
 #[contracttype]
@@ -30,6 +30,18 @@ impl SorobanSdkMinor {
     /// @param  admin The administrator address to store.
     pub fn init(env: Env, admin: Address) {
         admin.require_auth();
+        // Prevent re-initialization: if Admin is already present, refuse to overwrite.
+        // This enforces a one-time init semantics and closes a potential
+        // accidental takeover/reinitialization attack vector.
+        if env
+            .storage()
+            .instance()
+            .get::<Address>(&DataKey::Admin)
+            .is_some()
+        {
+            panic!("already initialized");
+        }
+
         env.storage().instance().set(&DataKey::Admin, &admin);
     }
 
@@ -39,6 +51,19 @@ impl SorobanSdkMinor {
     pub fn check_auth(_env: Env, user: Address) -> bool {
         user.require_auth();
         true
+    }
+
+    /// @notice Emit a small, typed event (topic = `ping`) that demonstrates
+    ///         the v22 logging/event bounds using a typed payload.
+    /// @dev    The emitter must authorize the call via `require_auth()`.
+    /// @param  from  The address which emits the event (must authorize).
+    /// @param  value A small integer payload included in the event.
+    pub fn emit_ping(env: Env, from: Address, value: i32) {
+        // enforce the new auth pattern
+        from.require_auth();
+        // use a short Symbol topic and a primitive payload which satisfy
+        // the Soroban v22 bounds for events
+        env.events().publish((Symbol::short("ping"),), value);
     }
 
     /// @notice Returns the stored admin address.

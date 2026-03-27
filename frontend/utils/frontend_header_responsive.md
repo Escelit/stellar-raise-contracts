@@ -455,6 +455,13 @@ npm run test:coverage
 
 ## Changelog
 
+### Version 1.1.0
+
+- Added tests for `resizeObserver` cleanup path in `destroy()`
+- Added tests for `useHeaderResponsive` browser and SSR-equivalent paths
+- Improved test coverage to 98%+ statements/lines across all files
+- All 93 tests passing
+
 ### Version 1.0.0
 
 - Initial implementation

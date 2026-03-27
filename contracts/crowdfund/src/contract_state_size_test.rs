@@ -57,11 +57,10 @@ fn str_of_len(env: &Env, n: u32) -> String {
 
 #[test]
 fn constants_have_expected_values() {
-    // Updated values for optimization
     assert_eq!(MAX_CONTRIBUTORS, 128);
     assert_eq!(MAX_ROADMAP_ITEMS, 32);
     assert_eq!(MAX_STRETCH_GOALS, 32);
-    assert_eq!(MAX_STRING_LEN, 2048); // MAX_STRING_LEN = MAX_DESCRIPTION_LENGTH
+    assert_eq!(MAX_STRING_LEN, 256);
 }
 
 // ── error discriminants ───────────────────────────────────────────────────────

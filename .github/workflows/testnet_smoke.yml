@@ -89,13 +89,14 @@ jobs:
             exit 1
           fi
 
-      - name: Query and log campaign stats
+      - name: Query and log total raised
         run: |
-          stellar contract invoke \
+          RAISED=$(stellar contract invoke \
             --id $CONTRACT_ID \
             --network $NETWORK \
             --source ci-deployer \
-            -- get_stats
+            -- total_raised)
+          echo "total_raised: $RAISED"
 
       - name: Log deployed contract address for reference
         run: |

@@ -35,14 +35,52 @@ stellar-raise-contracts/
 
 ## Prerequisites
 
-- [Rust](https://rustup.rs/) (stable)
-- The `wasm32-unknown-unknown` target:
+| Requirement | Minimum | Notes |
+| :--- | :--- | :--- |
+| OS | Linux x86-64 or macOS 12+ | WSL2 on Windows |
+| RAM | 4 GB | 8 GB recommended for `--release` builds |
+| Rust | stable ≥ 1.74 | `rustup update stable` |
+| Stellar CLI | ≥ 20.0.0 | Renamed from `soroban` in v20 |
+| Node.js | ≥ 18 | Required for frontend UI and JS tests |
 
-  ```bash
-  rustup target add wasm32-unknown-unknown
-  ```
+### Install Rust and WASM target
 
-- [Stellar CLI](https://soroban.stellar.org/docs/getting-started/setup) (optional, for deployment)
+```bash
+# Install Rust via rustup (https://rustup.rs)
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source "$HOME/.cargo/env"
+
+# Add the WASM compilation target
+rustup target add wasm32-unknown-unknown
+
+# Verify
+rustc --version
+rustup target list --installed | grep wasm32
+```
+
+### Install Stellar CLI
+
+```bash
+curl -Ls https://soroban.stellar.org/install-soroban.sh | sh
+source ~/.bashrc   # or ~/.zshrc
+stellar --version  # should print stellar-cli x.y.z
+```
+
+### Install Node.js (frontend UI)
+
+Node.js ≥ 18 is required to run the frontend and its test suite.
+
+```bash
+# Using nvm (recommended)
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+source ~/.bashrc
+nvm install 18
+nvm use 18
+node --version   # v18.x.x
+npm --version
+```
+
+> Alternatively, download directly from [nodejs.org](https://nodejs.org/).
 
 ## Getting Started
 
@@ -54,9 +92,21 @@ cd stellar-raise-contracts
 # Build the contract
 cargo build --release --target wasm32-unknown-unknown
 
-# Run tests
+# Run contract tests
 cargo test --workspace
+
+# Install frontend dependencies
+cd frontend
+npm install
+
+# Run frontend tests (single pass, no watch)
+npm test -- --run
+
+# Start the frontend dev server (run manually in your terminal)
+# npm run dev
 ```
+
+> See [`docs/readme_md_installation.md`](docs/readme_md_installation.md) for edge cases, automated environment verification, and frontend-specific troubleshooting.
 
 ## Contract Interface
 
@@ -159,21 +209,25 @@ We provide automated scripts to simplify deploying and interacting with the crow
 
 #### Prerequisites
 
-1. **Install Soroban CLI:**
+1. **Install Stellar CLI (v20+):**
 
    ```bash
    curl -Ls https://soroban.stellar.org/install-soroban.sh | sh
+   source ~/.bashrc   # or ~/.zshrc
+   stellar --version  # should print stellar-cli x.y.z
    ```
 
-2. **Configure your Soroban identity:**
+2. **Configure your Stellar identity:**
 
    ```bash
-   soroban keys generate --global <alice>
+   stellar keys generate --global alice
    ```
 
 3. **Add the testnet network:**
    ```bash
-   soroban network add testnet --rpc-url https://soroban-testnet.stellar.org:443 --network-passphrase "Test SDF Network ; September 2015"
+   stellar network add testnet \
+     --rpc-url https://soroban-testnet.stellar.org:443 \
+     --network-passphrase "Test SDF Network ; September 2015"
    ```
 
 #### Deploy Script
@@ -249,14 +303,14 @@ If you prefer manual deployment:
 # Build the optimized WASM
 cargo build --release --target wasm32-unknown-unknown
 
-# Deploy using Soroban CLI
-soroban contract deploy \
+# Deploy using Stellar CLI
+stellar contract deploy \
   --wasm target/wasm32-unknown-unknown/release/crowdfund.wasm \
   --network testnet \
   --source <YOUR_SECRET_KEY>
 
 # Initialize the campaign
-soroban contract invoke \
+stellar contract invoke \
   --id <CONTRACT_ADDRESS> \
   --network testnet \
   --source <YOUR_SECRET_KEY> \
@@ -272,6 +326,93 @@ soroban contract invoke \
 ## Code of Conduct
 
 Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before contributing.
+
+## Troubleshooting
+
+### WASM target missing
+
+```bash
+# Symptom: error[E0463]: can't find crate for `std`
+rustup target add wasm32-unknown-unknown
+rustup target list --installed | grep wasm32
+```
+
+### Stellar CLI not found or wrong version
+
+```bash
+# Symptom: stellar: command not found  OR  unexpected argument '--source-account'
+# The CLI was renamed from `soroban` to `stellar` in v20. Install the latest:
+curl -Ls https://soroban.stellar.org/install-soroban.sh | sh
+source ~/.bashrc   # or ~/.zshrc
+stellar --version  # should print stellar-cli x.y.z
+```
+
+### Testnet vs. Futurenet identity setup
+
+```bash
+# Generate a funded testnet identity (friendbot auto-funds on testnet)
+stellar keys generate --global alice --network testnet
+stellar keys address alice
+
+# For Futurenet (manual funding required):
+stellar network add futurenet \
+  --rpc-url https://rpc-futurenet.stellar.org:443 \
+  --network-passphrase "Test SDF Future Network ; October 2022"
+stellar keys generate --global alice-futurenet --network futurenet
+```
+
+> **Security**: Never commit `.soroban/` or `~/.config/stellar/` directories.
+> They contain plaintext secret keys. Add `.soroban/` to `.gitignore`.
+
+### cargo build fails after `rustup update`
+
+```bash
+rustup update stable
+rustup target add wasm32-unknown-unknown   # re-add after toolchain update
+cargo clean && cargo build --release --target wasm32-unknown-unknown
+```
+
+### cargo test hangs or times out
+
+Soroban tests spin up an in-process ledger. On machines with limited RAM,
+running all tests in parallel can exhaust memory.
+
+```bash
+# Limit test thread parallelism
+cargo test --workspace -- --test-threads=2
+```
+
+### Node.js version mismatch (frontend)
+
+```bash
+# Symptom: SyntaxError or "engine" warning during npm install
+node --version   # must be >= 18
+nvm install 18 && nvm use 18
+npm install
+```
+
+### npm install fails with peer dependency errors
+
+```bash
+# Use legacy peer deps flag if needed (Node 18+)
+npm install --legacy-peer-deps
+```
+
+### Frontend dev server port conflict
+
+```bash
+# Symptom: EADDRINUSE: address already in use :::3000
+# Kill the process on port 3000 and restart
+lsof -ti:3000 | xargs kill -9
+npm run dev
+```
+
+For a full edge-case checklist and automated environment verification, see
+[`docs/readme_md_installation.md`](docs/readme_md_installation.md) and run:
+
+```bash
+./scripts/verify_env.sh
+```
 
 ## Changelog
 
