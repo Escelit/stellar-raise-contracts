@@ -1,6 +1,6 @@
 #![no_std]
 
-use soroban_sdk::{contract, contractimpl, contracttype, Address, Env, Symbol};
+use soroban_sdk::{contract, contractimpl, contracttype, symbol_short, Address, Env, Symbol};
 
 /// Storage key for the admin address.
 #[contracttype]
@@ -36,7 +36,7 @@ impl SorobanSdkMinor {
         if env
             .storage()
             .instance()
-            .get::<Address>(&DataKey::Admin)
+            .get::<DataKey, Address>(&DataKey::Admin)
             .is_some()
         {
             panic!("already initialized");
@@ -63,7 +63,7 @@ impl SorobanSdkMinor {
         from.require_auth();
         // use a short Symbol topic and a primitive payload which satisfy
         // the Soroban v22 bounds for events
-        env.events().publish((Symbol::short("ping"),), value);
+        env.events().publish((symbol_short!("ping"),), value);
     }
 
     /// @notice Returns the stored admin address.

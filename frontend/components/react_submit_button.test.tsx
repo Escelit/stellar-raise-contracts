@@ -319,25 +319,25 @@ describe("ReactSubmitButton click handling", () => {
 
   it("does NOT fire onClick in submitting state", () => {
     const onClick = jest.fn();
-    act(() => {
-      fireEvent.click(renderBtn({ state: "submitting", onClick }));
-    });
+    const { container } = render(<ReactSubmitButton state="submitting" onClick={onClick} />);
+    const btn = container.querySelector("button") as HTMLButtonElement;
+    fireEvent.click(btn);
     expect(onClick).not.toHaveBeenCalled();
   });
 
   it("does NOT fire onClick in disabled state", () => {
     const onClick = jest.fn();
-    act(() => {
-      fireEvent.click(renderBtn({ state: "disabled", onClick }));
-    });
+    const { container } = render(<ReactSubmitButton state="disabled" onClick={onClick} />);
+    const btn = container.querySelector("button") as HTMLButtonElement;
+    fireEvent.click(btn);
     expect(onClick).not.toHaveBeenCalled();
   });
 
   it("does NOT fire onClick when disabled prop is true", () => {
     const onClick = jest.fn();
-    act(() => {
-      fireEvent.click(renderBtn({ disabled: true, onClick }));
-    });
+    const { container } = render(<ReactSubmitButton state="idle" disabled={true} onClick={onClick} />);
+    const btn = container.querySelector("button") as HTMLButtonElement;
+    fireEvent.click(btn);
     expect(onClick).not.toHaveBeenCalled();
   });
 

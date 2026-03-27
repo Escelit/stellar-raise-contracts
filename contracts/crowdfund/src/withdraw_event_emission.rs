@@ -120,12 +120,7 @@ pub fn mint_nfts_in_batch(env: &Env, nft_contract: &Option<Address>) -> u32 {
             .get(&DataKey::Contribution(contributor.clone()))
             .unwrap_or(0);
         if contribution > 0 {
-            env.invoke_contract::<()>(
-                nft_contract,
-                &Symbol::new(env, "mint"),
-                Vec::from_array(env, [contributor.into_val(env), token_id.into_val(env)]),
-            );
-            token_id += 1;
+            client.mint(&contributor);
             minted += 1;
         }
     }

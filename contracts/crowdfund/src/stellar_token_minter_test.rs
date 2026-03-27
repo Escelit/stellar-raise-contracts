@@ -127,6 +127,7 @@ fn init_campaign(
         &deadline,
         &TEST_MIN_CONTRIBUTION,
         &None,
+        &None::<i128>,
         &None,
         &None,
     );

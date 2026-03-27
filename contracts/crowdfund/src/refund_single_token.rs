@@ -78,7 +78,6 @@ pub fn refund_single_transfer(
         return;
     }
 
-    // Debug logging for devex and monitoring
     token_client.env().events().publish(
         ("debug", "refund_transfer_attempt"),
         (contributor.clone(), amount),

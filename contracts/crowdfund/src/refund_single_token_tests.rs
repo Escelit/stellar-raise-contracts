@@ -63,10 +63,7 @@ fn init(
     deadline: u64,
 ) {
     client.initialize(
-        creator, creator, token, &goal, &deadline, &1_000, &None, &None, &None,
-        &None,
-        &None,
-        &None,
+        creator, creator, token, &goal, &deadline, &1_000, &None::<i128>, &None, &None, &None,
     );
 }
 

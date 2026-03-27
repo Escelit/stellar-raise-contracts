@@ -51,6 +51,7 @@ fn setup() -> (Env, CrowdfundContractClient<'static>, Address) {
         &GOAL,
         &(now + DEADLINE_OFFSET),
         &MIN,
+        &None::<i128>,
         &None,
         &None,
         &None,

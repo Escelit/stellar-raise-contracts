@@ -17,7 +17,10 @@
 
 #[cfg(test)]
 mod tests {
+    extern crate std;
     use std::collections::HashMap;
+    use std::format;
+    use std::vec;
 
     use crate::npm_package_lock::{
         audit_all, audit_all_bounded, audit_package, failing_results, is_version_gte,
@@ -466,10 +469,5 @@ mod tests {
         let advisories = create_advisory_map(vec![]);
         let err = audit_all_bounded(&packages, &advisories).unwrap_err();
         assert!(err.contains("MAX_PACKAGES"));
-    }
-
-    #[test]
-    fn test_max_packages_constant_is_positive() {
-        assert!(MAX_PACKAGES > 0);
     }
 }

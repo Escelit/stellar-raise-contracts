@@ -1,43 +1,12 @@
 //! # npm_package_lock
-//!
-//! @title   NpmPackageLockAuditor — Vulnerability audit module for package-lock.json entries.
-//!
-//! @notice  Audits `package-lock.json` dependency entries for known security
-//!          vulnerabilities, version constraint violations, and integrity hash validity.
-//!
-//!          Introduced to address **GHSA-xpqw-6gx7-v673** — a high-severity
-//!          Denial-of-Service vulnerability in `svgo` versions `>=3.0.0 <3.3.3`
-//!          caused by unconstrained XML entity expansion (Billion Laughs attack)
-//!          when processing SVG files containing a malicious `DOCTYPE` declaration.
-//!
-//! ## Security Assumptions
-//!
-//! 1. `sha512` integrity hashes are the only accepted algorithm; `sha1` and
-//!    `sha256` are rejected as insufficient.
-//! 2. `lockfileVersion` must be 2 or 3 (npm >=7). Version 1 lacks integrity
-//!    hashes for all entries and is considered insecure.
-//! 3. The advisory map (`min_safe_versions`) must be kept up to date as new
-//!    CVEs are published. This module does not perform live advisory lookups.
-//! 4. This module audits resolved versions only. Ranges in `package.json`
-//!    should be reviewed separately to prevent future resolution of vulnerable
-//!    versions.
-//! 5. `audit_all_bounded` enforces a hard cap on input size to prevent
-//!    unbounded processing (gas efficiency / DoS protection).
-//!
-//! @dev     All checks are pure functions operating on parsed data structs.
-
-#![allow(dead_code)]
-
+#![cfg(test)]
+extern crate std;
 use std::collections::HashMap;
+use std::format;
+use std::string::String;
+use std::vec::Vec;
 
 // ── Bounds ───────────────────────────────────────────────────────────────────
-
-/// @notice Hard cap on the number of packages processed by `audit_all_bounded`.
-/// @dev    Prevents unbounded iteration — mirrors gas-limit patterns used in
-///         on-chain contracts. Adjust upward only with a documented rationale.
-pub const MAX_PACKAGES: u32 = 500;
-
-// ── Constants ────────────────────────────────────────────────────────────────
 
 /// @notice Hard cap on the number of packages processed by `audit_all_bounded`.
 /// @dev    Prevents unbounded iteration; mirrors gas-limit patterns in

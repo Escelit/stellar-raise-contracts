@@ -33,6 +33,7 @@ fn setup() -> (
         &1_000i128,
         &deadline,
         &1i128,
+        &None::<i128>,
         &None,
         &None,
         &None,
