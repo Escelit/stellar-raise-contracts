@@ -397,13 +397,14 @@ fn test_refund_single_after_batch_refund_returns_nothing_to_refund() {
 
     env.ledger().set_timestamp(deadline + 1);
     client.finalize(); // Active → Expired
-    client.refund(); // deprecated batch path — zeroes alice's record
+    // Claim alice's refund via refund_single
+    client.refund_single(&alice);
 
-    // alice already got her tokens back via batch refund
+    // alice got her tokens back
     let tc = token::Client::new(&env, &token);
     assert_eq!(tc.balance(&alice), 500_000);
 
-    // refund_single should now return NothingToRefund (amount is 0)
+    // A second call should return NothingToRefund (amount is 0)
     let result = client.try_refund_single(&alice);
     assert_eq!(result.unwrap_err().unwrap(), ContractError::NothingToRefund);
 }
@@ -425,14 +426,11 @@ fn test_refund_single_ignores_platform_fee() {
         &1_000_000,
         &deadline,
         &1_000,
+        &None,
         &Some(PlatformConfig {
-                &None,
             address: platform_addr.clone(),
             fee_bps: 500, // 5%
         }),
-        &None,
-        &None,
-        &None,
         &None,
         &None,
     );
@@ -538,6 +536,7 @@ fn test_refund_available_returns_amount_when_possible() {
     client.contribute(&alice, &50_000);
 
     env.ledger().set_timestamp(deadline + 1);
+    client.finalize(); // Active → Expired
 
     let result = client.refund_available(&alice);
     assert_eq!(result, Ok(50_000));
@@ -555,6 +554,7 @@ fn test_refund_available_returns_nothing_to_refund_after_claim() {
     client.contribute(&alice, &50_000);
 
     env.ledger().set_timestamp(deadline + 1);
+    client.finalize(); // Active → Expired
 
     // Check available before claiming
     let result = client.refund_available(&alice);

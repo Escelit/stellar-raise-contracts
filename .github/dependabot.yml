@@ -83,8 +83,3 @@ updates:
     commit-message:
       prefix: "ci"
       include: "scope"
-  - name: Check Spelling
-     uses: streetsidesoftware/cspell-action@v6
-     with:
-    # This tells cspell to use defaults if no config is found
-    config: '.github/godabeg.cspell.json'

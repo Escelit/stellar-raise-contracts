@@ -93,6 +93,7 @@ fn setup_with_nft(
         &None,
         &None,
         &None,
+        &None,
     );
     client.set_nft_contract(&creator, &nft_id);
 
@@ -131,6 +132,7 @@ fn setup_no_nft(contribution: i128) -> (Env, CrowdfundContractClient<'static>, A
         &contribution,
         &deadline,
         &1,
+        &None,
         &None,
         &None,
         &None,
@@ -322,6 +324,7 @@ fn test_withdrawn_event_payout_reflects_fee_deduction() {
         &goal,
         &deadline,
         &1,
+        &None::<i128>,
         &Some(PlatformConfig {
             address: platform_addr,
             fee_bps: 500,
@@ -371,6 +374,7 @@ fn test_withdraw_emits_fee_transferred_event() {
         &goal,
         &deadline,
         &1,
+        &None::<i128>,
         &Some(PlatformConfig {
             address: platform_addr,
             fee_bps: 200,
@@ -502,6 +506,7 @@ fn test_fee_transferred_event_data_includes_fee_amount() {
         &goal,
         &deadline,
         &1,
+        &None::<i128>,
         &Some(config),
         &None,
         &None,
@@ -553,6 +558,7 @@ fn test_fee_transferred_event_fee_amount_matches_config() {
         &goal,
         &deadline,
         &1,
+        &None::<i128>,
         &Some(config),
         &None,
         &None,

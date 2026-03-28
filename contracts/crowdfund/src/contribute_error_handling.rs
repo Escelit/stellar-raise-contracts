@@ -13,10 +13,10 @@
 //! |------|----------------------|--------------------------------------------------|
 //! |  2   | `CampaignEnded`      | `ledger.timestamp > deadline`                    |
 //! |  6   | `Overflow`           | contribution or total_raised would overflow      |
-//! |  8   | `ZeroAmount`         | `amount == 0`                                    |
-//! |  9   | `BelowMinimum`       | `amount < min_contribution`                      |
-//! | 10   | `CampaignNotActive`  | campaign status is not `Active`                  |
-//! | 11   | `NegativeAmount`     | `amount < 0`                                     |
+//! | 14   | `ZeroAmount`         | `amount == 0`                                    |
+//! | 15   | `BelowMinimum`       | `amount < min_contribution`                      |
+//! | 16   | `CampaignNotActive`  | campaign status is not `Active`                  |
+//! | 17   | `NegativeAmount`     | `amount < 0`                                     |
 //!
 //! # Security assumptions
 //!
@@ -38,15 +38,14 @@ pub mod error_codes {
     /// A checked arithmetic operation overflowed.
     pub const OVERFLOW: u32 = 6;
     /// `amount` was zero.
-    pub const ZERO_AMOUNT: u32 = 13;
+    pub const ZERO_AMOUNT: u32 = 14;
     /// `amount` was below `min_contribution`.
-    pub const BELOW_MINIMUM: u32 = 14;
+    pub const BELOW_MINIMUM: u32 = 15;
     /// Campaign status is not `Active`.
-    pub const CAMPAIGN_NOT_ACTIVE: u32 = 15;
+    pub const CAMPAIGN_NOT_ACTIVE: u32 = 16;
     /// `amount` was negative.
-    pub const NEGATIVE_AMOUNT: u32 = 16;
-    /// Alias kept for off-chain scripts that used the old code 9.
-    /// Prefer BELOW_MINIMUM (14).
+    pub const NEGATIVE_AMOUNT: u32 = 17;
+    /// Alias for scripts that referred to “amount too low”; same as [`BELOW_MINIMUM`].
     pub const AMOUNT_TOO_LOW: u32 = BELOW_MINIMUM;
 }
 

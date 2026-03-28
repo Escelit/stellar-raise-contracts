@@ -53,9 +53,6 @@ fn setup() -> (
         &None,
         &None,
         &None,
-        &None,
-        &None,
-        &None,
     );
 
     (env, contract_id, client, admin, creator)
@@ -123,19 +120,9 @@ fn validate_wasm_hash_alternating_bytes_valid() {
 /// @notice Returns false before initialize() — no storage read of the value.
 #[test]
 fn is_admin_initialized_false_before_init() {
-    let env = Env::default();
-    env.mock_all_auths();
-    let contract_id = env.register(CrowdfundContract, ());
-    // Invoke the check inside the contract's storage context.
-    // We test the helper directly via the module since it's pub.
-    // The contract's instance storage is scoped to contract_id, so we need
-    // to call it from within that context — use a raw env check instead.
-    // is_admin_initialized reads env.storage().instance(), which is
-    // contract-scoped; we verify the helper logic with a fresh env.
     let fresh_env = Env::default();
     // A fresh env has no instance storage set → has() returns false.
     assert!(!is_admin_initialized(&fresh_env));
-    let _ = contract_id;
 }
 
 /// @notice Returns true after initialize() stores the admin.
@@ -218,20 +205,14 @@ fn upgrade_requires_auth() {
 // ── Gas-efficiency edge case: zero-hash short-circuit ────────────────────────
 
 /// @notice Zero hash is rejected before any storage read or auth check.
-/// @dev This is the core gas-efficiency improvement: a zero hash panics with
-///      "zero wasm hash" rather than reaching `validate_admin_upgrade`.
 #[test]
 #[should_panic(expected = "zero wasm hash")]
 fn upgrade_panics_on_zero_hash_before_auth() {
     let (env, _contract_id, client, _admin, _creator) = setup();
-    // mock_all_auths is active from setup(); even with valid auth the zero
-    // hash must be caught first.
     client.upgrade(&zero_hash(&env));
 }
 
 /// @notice Zero hash is rejected even when called with no auth at all.
-/// @dev Confirms the zero-hash check fires before the auth check — the panic
-///      message is "zero wasm hash", not an auth error.
 #[test]
 #[should_panic(expected = "zero wasm hash")]
 fn upgrade_zero_hash_rejected_before_auth_check() {
@@ -248,8 +229,6 @@ fn upgrade_zero_hash_rejected_before_init_check() {
     env.mock_all_auths();
     let contract_id = env.register(CrowdfundContract, ());
     let client = CrowdfundContractClient::new(&env, &contract_id);
-    // No initialize() called; zero hash should still panic with "zero wasm hash"
-    // (not "Admin not initialized"), proving the pure check runs first.
     client.upgrade(&zero_hash(&env));
 }
 
@@ -280,7 +259,6 @@ fn storage_unchanged_after_zero_hash_rejection() {
     let goal_before = client.goal();
     let raised_before = client.total_raised();
 
-    // Zero hash panics; catch it via try_upgrade.
     let _ = client.try_upgrade(&zero_hash(&env));
 
     assert_eq!(client.goal(), goal_before);

@@ -126,8 +126,8 @@ fn init_campaign(
         &goal,
         &deadline,
         &TEST_MIN_CONTRIBUTION,
-        &None,
         &None::<i128>,
+        &None,
         &None,
         &None,
     );
@@ -402,6 +402,7 @@ fn test_bonus_goal_event_emitted_exactly_once() {
         &TEST_BONUS_PRIMARY_GOAL,
         &deadline,
         &TEST_MIN_CONTRIBUTION,
+        &None::<i128>,
         &None,
         &Some(TEST_BONUS_GOAL),
         &None,

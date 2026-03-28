@@ -1,4 +1,5 @@
 # Stellar Raise - Frontend Responsive Design System
+<!-- milestone celebration customization support added -->
 
 A comprehensive, mobile-first responsive design framework for the Stellar Raise crowdfunding dApp. Built to maintain the "Modern" and "Trusted" brand identity across all devices.
 

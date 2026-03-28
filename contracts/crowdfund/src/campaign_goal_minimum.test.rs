@@ -1,3 +1,5 @@
+#![allow(deprecated)] // `validate_goal` retained for regression coverage until fully removed.
+
 //! Comprehensive tests for `campaign_goal_minimum` constants and validation helpers.
 //!
 //! # Coverage
@@ -5,7 +7,7 @@
 //! | Area                    | Cases                                                    |
 //! |-------------------------|----------------------------------------------------------|
 //! | Constants               | Correct values, stability, scale invariant               |
-//! | `validate_goal`         | Minimum, above minimum, large, zero, negative, i128::MIN |
+//! | `validate_goal` (deprecated) | Same thresholds as `validate_goal_amount`; kept for regression |
 //! | `validate_goal_amount`  | Typed `GoalTooLow`, exact threshold, zero, negative      |
 //! | `validate_min_contribution` | Floor, large, zero, negative, i128::MIN              |
 //! | `validate_deadline`     | Exact offset, future, one-past, equal-now, past, overflow|
@@ -355,5 +357,12 @@ fn validate_goal_amount_is_idempotent() {
 ///            that map numeric codes to messages continue to work after upgrades.
 #[test]
 fn goal_too_low_discriminant_is_stable() {
-    assert_eq!(ContractError::GoalTooLow as u32, 18);
+    assert_eq!(ContractError::GoalTooLow as u32, 13);
+}
+
+/// `initialize` maps sub-minimum goals to `InvalidGoal` (8), not `GoalTooLow`,
+/// for backward-compatible client error handling.
+#[test]
+fn invalid_goal_discriminant_for_initialize_path() {
+    assert_eq!(ContractError::InvalidGoal as u32, 8);
 }

@@ -76,7 +76,7 @@
 //!        │
 //!        ├─► re-initialization guard     → AlreadyInitialized
 //!        ├─► creator.require_auth()
-//!        ├─► validate_goal(goal)         → InvalidGoal
+//!        ├─► validate_goal_amount(env, goal) → InvalidGoal (maps GoalTooLow)
 //!        ├─► validate_min_contribution() → InvalidMinContribution
 //!        ├─► validate_deadline(now, dl)  → DeadlineTooSoon
 //!        ├─► validate_platform_fee(bps)  → InvalidPlatformFee
@@ -104,7 +104,7 @@
 use soroban_sdk::{Address, Env, String, Symbol, Vec};
 
 use crate::campaign_goal_minimum::{
-    validate_deadline, validate_goal, validate_min_contribution, validate_platform_fee,
+    validate_deadline, validate_goal_amount, validate_min_contribution, validate_platform_fee,
 };
 use crate::{ContractError, DataKey, PlatformConfig, RoadmapItem, Status};
 
@@ -215,7 +215,9 @@ pub fn validate_bonus_goal_description(description: &Option<String>) -> Result<(
 /// @dev    Validation order matches the storage write order in `execute_initialize()`
 ///         so that error codes are predictable and auditable.
 pub fn validate_init_params(env: &Env, params: &InitParams) -> Result<(), ContractError> {
-    validate_goal(params.goal).map_err(|_| ContractError::InvalidGoal)?;
+    // Canonical floor check via `validate_goal_amount`; map `GoalTooLow` → `InvalidGoal`
+    // so existing clients keep the stable `initialize` error code (8).
+    validate_goal_amount(env, params.goal).map_err(|_| ContractError::InvalidGoal)?;
     validate_min_contribution(params.min_contribution).map_err(|_| ContractError::InvalidMinContribution)?;
     validate_deadline(env.ledger().timestamp(), params.deadline).map_err(|_| ContractError::DeadlineTooSoon)?;
 

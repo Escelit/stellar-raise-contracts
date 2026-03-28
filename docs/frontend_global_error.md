@@ -173,7 +173,8 @@ async function contribute(amount: number) {
 
 ## Test Coverage
 
-Tests live in `frontend/components/frontend_global_error.test.tsx` and cover:
+Tests live in `frontend/components/frontend_global_error.test.tsx` and
+`frontend/utils/frontend_global_error.test.tsx` and cover:
 
 - Custom error class instantiation and inheritance
 - Normal (no-error) rendering

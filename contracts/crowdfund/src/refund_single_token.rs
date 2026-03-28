@@ -78,7 +78,7 @@ pub fn refund_single_transfer(
         return;
     }
 
-    token_client.env().events().publish(
+    token_client.env.events().publish(
         ("debug", "refund_transfer_attempt"),
         (contributor.clone(), amount),
     );
