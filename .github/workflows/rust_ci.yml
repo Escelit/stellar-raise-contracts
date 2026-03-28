@@ -63,6 +63,13 @@ jobs:
           targets: wasm32-unknown-unknown
           components: clippy, rustfmt
 
+      # ── Dependency vulnerability scan ────────────────────
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+
+      - name: Audit Rust dependencies
+        run: cargo audit
+
       # ── Cache ────────────────────────────────────────────
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2

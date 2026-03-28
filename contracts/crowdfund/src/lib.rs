@@ -8,6 +8,7 @@ use soroban_sdk::{
 
 pub mod access_control;
 pub mod admin_upgrade_mechanism;
+pub mod dependency_vulnerability_scanning;
 pub mod pause_mechanism;
 pub mod algorithm_optimization;
 pub mod session_management;
@@ -52,6 +53,9 @@ mod access_control_tests;
 #[cfg(test)]
 #[path = "admin_upgrade_mechanism.test.rs"]
 mod admin_upgrade_mechanism_test;
+#[cfg(test)]
+#[path = "dependency_vulnerability_scanning.test.rs"]
+mod dependency_vulnerability_scanning_test;
 #[cfg(test)]
 #[path = "pause_mechanism.test.rs"]
 mod pause_mechanism_test;
