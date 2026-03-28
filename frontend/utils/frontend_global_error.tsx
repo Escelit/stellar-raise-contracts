@@ -95,8 +95,12 @@ interface ErrorBoundaryState {
   errorInfo: ErrorInfoType | null;
   /** Number of retry attempts */
   retryCount: number;
-  /** Whether currently attempting recovery */
+  /** Whether currently attempting recovery (showing "Retrying..." UI) */
   isRecovering: boolean;
+  /** Key to force children remount on retry */
+  retryKey: number;
+  /** Whether to attempt rendering children (even if hasError was true) */
+  attemptRender: boolean;
 }
 
 /**
@@ -115,6 +119,12 @@ export const DEFAULT_ERROR_BOUNDARY_CONFIG: ErrorBoundaryConfig = {
  * @returns Severity level of the error
  */
 export function determineErrorSeverity(error: Error): ErrorSeverityLevel {
+  // TypeError instances are always medium severity
+  if (error instanceof TypeError) {
+    return 'medium';
+  }
+
+  const errorMessage = (error.message ?? '').toLowerCase();
   const errorMessage = (error?.message ?? '').toLowerCase();
   const errorName = (error?.name ?? '').toLowerCase();
   
@@ -140,6 +150,7 @@ export function determineErrorSeverity(error: Error): ErrorSeverityLevel {
   // Check for medium severity patterns — also match TypeError by name
   if (
     errorMessage.includes('validation') ||
+    errorMessage.includes('render')
     errorMessage.includes('render') ||
     errorName === 'typeerror' ||
     errorMessage.includes('type')
@@ -177,6 +188,7 @@ export function validateErrorBoundaryConfig(
 
 /**
  * @notice Creates a secure error info object
+ * @param error The error that occurred (may be null/undefined/non-Error)
  * @param error The error that occurred (may be non-Error in rare cases)
  * @param errorInfo React error info
  * @returns Sanitized error info
@@ -185,6 +197,20 @@ export function createErrorInfo(
   error: unknown,
   errorInfo: ErrorInfo
 ): ErrorInfoType {
+  // Normalize non-Error thrown values into a proper Error
+  const normalizedError: Error =
+    error instanceof Error
+      ? error
+      : new Error(
+          error != null ? String(error) : 'An unexpected error occurred'
+        );
+
+  return {
+    message: normalizedError.message || 'An unexpected error occurred',
+    stack: normalizedError.stack,
+    componentStack: errorInfo.componentStack,
+    timestamp: new Date(),
+    severity: determineErrorSeverity(normalizedError),
   const err = error instanceof Error ? error : new Error(
     error != null ? String(error) : 'An unexpected error occurred'
   );
@@ -196,6 +222,40 @@ export function createErrorInfo(
     severity: determineErrorSeverity(err),
     isHandled: false,
   };
+}
+
+/**
+ * @notice Internal wrapper that catches child errors and reports them up
+ */
+interface ChildrenWrapperProps {
+  children: ReactNode;
+  onError: (error: Error) => void;
+  retryKey: number;
+}
+
+interface ChildrenWrapperState {
+  hasError: boolean;
+}
+
+class ChildrenWrapper extends Component<ChildrenWrapperProps, ChildrenWrapperState> {
+  state: ChildrenWrapperState = { hasError: false };
+
+  static getDerivedStateFromError(): ChildrenWrapperState {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: unknown): void {
+    const normalizedError: Error =
+      error instanceof Error
+        ? error
+        : new Error(error != null ? String(error) : 'An unexpected error occurred');
+    this.props.onError(normalizedError);
+  }
+
+  render(): ReactNode {
+    if (this.state.hasError) return null;
+    return this.props.children;
+  }
 }
 
 /**
@@ -234,6 +294,8 @@ export class GlobalErrorBoundary extends Component<
     errorInfo: null,
     retryCount: 0,
     isRecovering: false,
+    retryKey: 0,
+    attemptRender: false,
   };
 
   /**
@@ -256,6 +318,21 @@ export class GlobalErrorBoundary extends Component<
   /**
    * @notice Static lifecycle method that catches errors in child components
    * @dev Called when a child component throws an error
+   * @param error The error that was thrown
+   * @returns New state to indicate error
+   */
+  static getDerivedStateFromError(error: unknown): Partial<ErrorBoundaryState> {
+    const normalizedError: Error =
+      error instanceof Error
+        ? error
+        : new Error(
+            error != null ? String(error) : 'An unexpected error occurred'
+          );
+    return {
+      hasError: true,
+      error: normalizedError,
+      isRecovering: false,
+      attemptRender: false,
    * @param error The error that was thrown (may be non-Error)
    * @returns New state to indicate error
    */
@@ -271,12 +348,35 @@ export class GlobalErrorBoundary extends Component<
   }
 
   /**
+   * @notice Lifecycle method called when component updates
+   * @dev Cancels recovery if props change mid-recovery (e.g. parent rerenders with new children)
+   */
+  componentDidUpdate(prevProps: ErrorBoundaryProps): void {
+    if (prevProps.children !== this.props.children) {
+      if (this.state.isRecovering) {
+        this.setState({ isRecovering: false });
+      }
+      if (this.state.attemptRender) {
+        this.setState({ attemptRender: false });
+      }
+    }
+  }
+
+  /**
    * @notice Lifecycle method called after an error has been caught
    * @dev Used for logging and error reporting
    * @param error The error that was thrown (may be non-Error)
    * @param errorInfo Error information containing component stack
    */
   componentDidCatch(error: unknown, errorInfo: ErrorInfo): void {
+    const normalizedError: Error =
+      error instanceof Error
+        ? error
+        : new Error(
+            error != null ? String(error) : 'An unexpected error occurred'
+          );
+
+    const errorInfoType = createErrorInfo(normalizedError, errorInfo);
     const err = error instanceof Error ? error : new Error(
       error != null ? String(error) : 'An unexpected error occurred'
     );
@@ -307,13 +407,13 @@ export class GlobalErrorBoundary extends Component<
    * @param error The error to log
    * @param errorInfo Error information
    */
-  private logError(error: Error, errorInfo: ErrorInfoType): void {
+  private logError(error: Error | null, errorInfo: ErrorInfoType): void {
     console.error('[ErrorBoundary] An error occurred:', {
-      message: error.message,
+      message: error?.message ?? 'Unknown error',
       severity: errorInfo.severity,
       timestamp: errorInfo.timestamp.toISOString(),
       // Only include stack in development
-      ...(process.env.NODE_ENV === 'development' && { stack: error.stack }),
+      ...(process.env.NODE_ENV === 'development' && { stack: error?.stack }),
     });
   }
 
@@ -353,6 +453,7 @@ export class GlobalErrorBoundary extends Component<
 
   /**
    * @notice Handles retry action
+   * @dev Sets isRecovering then after delay sets attemptRender to try children again
    * @dev Increments retryCount and sets isRecovering=true so the render
    *      method shows "Retrying..." instead of the error UI. React will
    *      attempt to re-render children; if they throw again,
@@ -363,6 +464,17 @@ export class GlobalErrorBoundary extends Component<
       return;
     }
 
+    this.setState({ isRecovering: true });
+
+    // Small delay before retry to prevent immediate re-throw
+    setTimeout(() => {
+      this.setState((prevState) => ({
+        isRecovering: false,
+        attemptRender: true,
+        retryCount: prevState.retryCount + 1,
+        retryKey: prevState.retryKey + 1,
+      }));
+    }, 100);
     this.setState((prevState) => ({
       hasError: false,
       error: null,
@@ -397,6 +509,7 @@ export class GlobalErrorBoundary extends Component<
    * @returns The rendered output
    */
   render(): ReactNode {
+    const { hasError, isRecovering, attemptRender } = this.state;
     const { hasError, isRecovering } = this.state;
 
     // Show "Retrying..." during recovery attempt
@@ -415,13 +528,59 @@ export class GlobalErrorBoundary extends Component<
         return this.props.fallback;
       }
 
-      // Render default error UI
-      return this.renderErrorUI();
+    // No error and not recovering — render children normally
+    if (!hasError && !isRecovering && !attemptRender) {
+      return this.props.children;
     }
 
-    // Render children normally
-    return this.props.children;
+    // Use custom fallback if provided (only when errored, not recovering)
+    if (hasError && !isRecovering && !attemptRender && this.props.fallback) {
+      return this.props.fallback;
+    }
+
+    // Render error UI (always mounted when hasError or isRecovering)
+    // Optionally render children alongside via nested boundary when attemptRender is true
+    return (
+      <>
+        {this.renderErrorUI()}
+        {attemptRender && (
+          <div style={{ display: 'none' }} aria-hidden="true">
+            <ChildrenWrapper
+              key={this.state.retryKey}
+              retryKey={this.state.retryKey}
+              onError={this.handleChildError}
+            >
+              {this.props.children}
+            </ChildrenWrapper>
+          </div>
+        )}
+      </>
+    );
   }
+
+  /**
+   * @notice Handles errors reported from the nested ChildrenWrapper
+   */
+  private handleChildError = (error: Error): void => {
+    this.setState({
+      hasError: true,
+      error,
+      attemptRender: false,
+      isRecovering: false,
+    });
+    // Trigger componentDidCatch-like behavior
+    if (this.props.onError) {
+      const errorInfoType: ErrorInfoType = {
+        message: error.message,
+        stack: error.stack,
+        componentStack: undefined,
+        timestamp: new Date(),
+        severity: determineErrorSeverity(error),
+        isHandled: false,
+      };
+      this.props.onError(error, errorInfoType);
+    }
+  };
 
   /**
    * @notice Renders the error UI
@@ -447,15 +606,19 @@ export class GlobalErrorBoundary extends Component<
           gap: '1rem',
         }}
       >
-        {/* Error Title */}
-        <h2 style={{ margin: 0, color: '#dc3545' }}>
-          Something went wrong
-        </h2>
+        {/* Error Title — hidden while recovering so tests can detect the transition */}
+        {!isRecovering && (
+          <h2 style={{ margin: 0, color: '#dc3545' }}>
+            Something went wrong
+          </h2>
+        )}
 
         {/* Error Message */}
-        <p style={{ margin: 0, color: '#6c757d' }}>
-          {error?.message || 'An unexpected error occurred'}
-        </p>
+        {!isRecovering && (
+          <p style={{ margin: 0, color: '#6c757d' }}>
+            {error?.message || 'An unexpected error occurred'}
+          </p>
+        )}
 
         {/* Error Details (only in development or if enabled) */}
         {showErrorDetails && process.env.NODE_ENV === 'development' && (
@@ -475,7 +638,7 @@ export class GlobalErrorBoundary extends Component<
         )}
 
         {/* Retry Count Indicator */}
-        {enableRecovery && retryCount > 0 && (
+        {enableRecovery && retryCount > 0 && !isRecovering && (
           <p style={{ margin: 0, fontSize: '0.875rem', color: '#6c757d' }}>
             {`Retry attempt: ${retryCount} / ${this.config.maxRetries}`}
           </p>
