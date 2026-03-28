@@ -55,11 +55,12 @@ pub mod crowdfund_initialize_function;
 pub mod npm_package_lock;
 pub mod proptest_generator_boundary;
 pub mod refund_single_token;
+pub mod security_compliance_automation;
+pub mod security_compliance_enforcement;
 pub mod soroban_sdk_minor;
 pub mod stellar_token_minter;
 pub mod stream_processing_optimization;
 pub mod withdraw_event_emission;
-pub mod security_compliance_automation;
 
 // ── Imports from modules ──────────────────────────────────────────────────────
 
@@ -319,6 +320,12 @@ mod crowdfund_initialize_function_test;
 #[path = "npm_package_lock_test.rs"]
 mod npm_package_lock_test;
 
+// NOTE: temporarily disabled due to pre-existing compilation errors
+// #[cfg(test)]
+// mod contribute_error_handling_tests;
+// #[cfg(test)]
+// #[path = "npm_package_lock_test.rs"]
+// mod npm_package_lock_test;
 #[cfg(test)]
 #[path = "proptest_generator_boundary.test.rs"]
 mod proptest_generator_boundary_tests;
@@ -365,9 +372,22 @@ mod stellar_token_minter_test_comprehensive;
 #[cfg(test)]
 #[path = "stream_processing_optimization.test.rs"]
 mod stream_processing_optimization_test;
+// NOTE: temporarily disabled due to pre-existing compilation errors
+// #[cfg(test)]
+// #[path = "stellar_token_minter_test.rs"]
+// mod stellar_token_minter_test_original;
+// #[cfg(test)]
+// #[path = "stellar_token_minter.test.rs"]
+// mod stellar_token_minter_test_comprehensive;
 #[cfg(test)]
 #[path = "security_compliance_automation.test.rs"]
 mod security_compliance_automation_test;
+#[cfg(test)]
+#[path = "security_compliance_enforcement.test.rs"]
+mod security_compliance_enforcement_test;
+#[cfg(test)]
+#[path = "stream_processing_optimization.test.rs"]
+mod stream_processing_optimization_test;
 
 // --- Constants ---
 const CONTRACT_VERSION: u32 = 3;
@@ -2260,11 +2280,7 @@ impl CrowdfundContract {
             };
 
             token_client.transfer(&env.current_contract_address(), &config.address, &fee);
-            withdraw_event_emission::emit_fee_transferred(
-                &env,
-                &config.address,
-                fee,
-            );
+            withdraw_event_emission::emit_fee_transferred(&env, &config.address, fee);
             total.checked_sub(fee).expect("creator payout underflow")
             total - fee
         } else {
