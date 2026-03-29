@@ -1,49 +1,81 @@
-# Contributing to Stellar Raise Contracts
+# Contributing Guide
 
-Thank you for your interest in contributing! 🎉
+Thank you for your interest in contributing to this project!
+Please read this guide carefully before opening a Pull Request.
 
-## How to Contribute
+## Prerequisites
 
-### 1. Fork & Clone
+- Rust (stable): https://rustup.rs
+- Soroban CLI: `cargo install soroban-cli`
+- wasm32 target: `rustup target add wasm32-unknown-unknown`
+
+## Setting Up Locally
+
+1. Fork and clone the repository:
 
 ```bash
-git clone https://github.com/<your-fork>/stellar-raise-contracts.git
+git clone https://github.com/<your-username>/stellar-raise-contracts.git
 cd stellar-raise-contracts
 ```
 
-### 2. Create a Branch
+2. Build the contract:
 
 ```bash
+cargo build --target wasm32-unknown-unknown --release
+```
+
+3. Run the test suite:
+
+```bash
+cargo test
+```
+
+## Branching Convention
+
+Always branch off `develop`, never `main`:
+
+```bash
+git checkout develop
+git pull origin develop
 git checkout -b feature/your-feature-name
 ```
 
-### 3. Make Your Changes
+## Submitting a Pull Request
 
-- Write clean, documented Rust code.
-- Add or update tests in `test.rs` for any new functionality.
-- Run the full test suite before submitting:
+1. Ensure all tests pass:
 
 ```bash
-cargo test --workspace
+cargo test
 ```
 
-### 4. Lint & Format
+2. Ensure code is formatted:
 
 ```bash
 cargo fmt --all
-cargo clippy --all-targets --all-features -- -D warnings
 ```
 
-### 5. Open a Pull Request
+3. Ensure no Clippy warnings:
 
-- Push your branch and open a PR against `main`.
-- Provide a clear description of your changes.
-- The CI pipeline will automatically run tests and lints.
+```bash
+cargo clippy --all-targets -- -D warnings
+```
 
-## Code of Conduct
+4. Push your branch and open a PR targeting `develop`.
+5. Reference the issue number with `Closes #<issue-number>` in your PR description.
 
-Be respectful and constructive. We're all here to build something great on Stellar.
+## Code Style
 
-## Reporting Issues
+- Follow standard Rust formatting enforced by `cargo fmt`.
+- All public functions must have `///` doc comments.
+- All new features must include tests.
+- Commit messages must follow conventional commits format:
+  - `feat:`
+  - `fix:`
+  - `docs:`
+  - `test:`
+  - `ci:`
+  - `chore:`
 
-Open an issue with a clear title, description, and steps to reproduce. Include your Rust version and OS.
+## Need Help?
+
+Open a Discussion or comment on the relevant issue. We are happy to help.

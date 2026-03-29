@@ -28,26 +28,32 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
 
-      - name: Install soroban-cli
-        run: cargo install soroban-cli
+      - name: Install Stellar CLI
+        run: cargo install stellar-cli
 
       - name: Build WASM binary
-        run: cargo build --target wasm32-unknown-unknown --release
+        run: cargo build --target wasm32-unknown-unknown --release -p crowdfund
+
+      - name: Configure testnet network
+        run: |
+          stellar network add testnet \
+            --rpc-url $RPC_URL \
+            --network-passphrase "$NETWORK_PASSPHRASE"
 
       - name: Configure testnet identity from secret
         env:
           TESTNET_SECRET_KEY: ${{ secrets.TESTNET_SECRET_KEY }}
         run: |
-          soroban keys add ci-deployer --secret-key $TESTNET_SECRET_KEY
+          stellar keys add ci-deployer --secret-key "$TESTNET_SECRET_KEY"
 
       - name: Fund testnet account via Friendbot
         run: |
-          soroban keys fund ci-deployer --network $NETWORK
+          stellar keys fund ci-deployer --network $NETWORK
 
       - name: Deploy contract to testnet
         id: deploy
         run: |
-          CONTRACT_ID=$(soroban contract deploy \
+          CONTRACT_ID=$(stellar contract deploy \
             --wasm target/wasm32-unknown-unknown/release/crowdfund.wasm \
             --network $NETWORK \
             --source ci-deployer)
@@ -57,36 +63,47 @@ jobs:
       - name: Initialize campaign
         run: |
           DEADLINE=$(( $(date +%s) + 86400 ))
+          CI_ADDR=$(stellar keys address ci-deployer)
+          stellar contract invoke \
+          CI_ADDR=$(soroban keys address ci-deployer)
           soroban contract invoke \
             --id $CONTRACT_ID \
             --network $NETWORK \
             --source ci-deployer \
             -- initialize \
-            --creator $(soroban keys address ci-deployer) \
+            --admin $CI_ADDR \
+            --creator $CI_ADDR \
             --token CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC \
             --goal 1000 \
-            --deadline $DEADLINE
+            --deadline $DEADLINE \
+            --min_contribution 1
 
-      - name: Assert is_initialized returns true
+      - name: Assert campaign goal is set
         run: |
-          RESULT=$(soroban contract invoke \
+          RESULT=$(stellar contract invoke \
             --id $CONTRACT_ID \
             --network $NETWORK \
             --source ci-deployer \
-            -- is_initialized)
-          echo "is_initialized: $RESULT"
-          if [ "$RESULT" != "true" ]; then
-            echo "Smoke test FAILED: is_initialized returned $RESULT"
+            -- goal)
+          echo "goal: $RESULT"
+          if [ "$RESULT" != "1000" ]; then
+            echo "Smoke test FAILED: goal returned $RESULT"
             exit 1
           fi
 
-      - name: Query and log campaign state
+      - name: Query and log total raised
+      - name: Query and log campaign stats
         run: |
-          soroban contract invoke \
+          RAISED=$(stellar contract invoke \
+      - name: Query and log campaign stats
+        run: |
+          RAISED=$(stellar contract invoke \
             --id $CONTRACT_ID \
             --network $NETWORK \
             --source ci-deployer \
-            -- get_campaign_info
+            -- total_raised)
+          echo "total_raised: $RAISED"
+            -- get_stats
 
       - name: Log deployed contract address for reference
         run: |

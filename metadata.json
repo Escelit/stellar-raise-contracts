@@ -1,0 +1,187 @@
+{
+    "format": "scripture burrito",
+    "projectName": "stellar-raise-contracts",
+    "projectId": "g1xgt31kyx25qewpjk7s7",
+    "meta": {
+        "version": "0.0.0",
+        "category": "Translation",
+        "generator": {
+            "softwareName": "Codex Editor",
+            "softwareVersion": "0.20.0",
+            "userName": "",
+            "userEmail": ""
+        },
+        "defaultLocale": "en",
+        "dateCreated": "Wed Feb 18 2026",
+        "normalization": "NFC",
+        "comments": [],
+        "requiredExtensions": {
+            "codexEditor": "0.20.0"
+        },
+        "validationCount": 1,
+        "validationCountAudio": 1,
+        "abbreviation": ""
+    },
+    "idAuthorities": {},
+    "identification": {},
+    "languages": [
+        {
+            "name": {
+                "en": "English"
+            },
+            "tag": "eng",
+            "refName": "English",
+            "projectStatus": "source"
+        },
+        {}
+    ],
+    "type": {
+        "flavorType": {
+            "name": "default",
+            "flavor": {
+                "name": "default",
+                "usfmVersion": "3.0",
+                "translationType": "unknown",
+                "audience": "general",
+                "projectType": "unknown"
+            },
+            "currentScope": {
+                "GEN": [],
+                "EXO": [],
+                "LEV": [],
+                "NUM": [],
+                "DEU": [],
+                "JOS": [],
+                "JDG": [],
+                "RUT": [],
+                "1SA": [],
+                "2SA": [],
+                "1KI": [],
+                "2KI": [],
+                "1CH": [],
+                "2CH": [],
+                "EZR": [],
+                "NEH": [],
+                "EST": [],
+                "JOB": [],
+                "PSA": [],
+                "PRO": [],
+                "ECC": [],
+                "SNG": [],
+                "ISA": [],
+                "JER": [],
+                "LAM": [],
+                "EZK": [],
+                "DAN": [],
+                "HOS": [],
+                "JOL": [],
+                "AMO": [],
+                "OBA": [],
+                "JON": [],
+                "MIC": [],
+                "NAM": [],
+                "HAB": [],
+                "ZEP": [],
+                "HAG": [],
+                "ZEC": [],
+                "MAL": [],
+                "MAT": [],
+                "MRK": [],
+                "LUK": [],
+                "JHN": [],
+                "ACT": [],
+                "ROM": [],
+                "1CO": [],
+                "2CO": [],
+                "GAL": [],
+                "EPH": [],
+                "PHP": [],
+                "COL": [],
+                "1TH": [],
+                "2TH": [],
+                "1TI": [],
+                "2TI": [],
+                "TIT": [],
+                "PHM": [],
+                "HEB": [],
+                "JAS": [],
+                "1PE": [],
+                "2PE": [],
+                "1JN": [],
+                "2JN": [],
+                "3JN": [],
+                "JUD": [],
+                "REV": []
+            }
+        }
+    },
+    "confidential": false,
+    "agencies": [],
+    "targetAreas": [],
+    "localizedNames": {},
+    "ingredients": {},
+    "copyright": {
+        "shortStatements": []
+    },
+    "edits": [
+        {
+            "editMap": [
+                "meta",
+                "validationCount"
+            ],
+            "value": 1,
+            "timestamp": 1771407911004,
+            "type": "user-edit",
+            "author": "unknown"
+        },
+        {
+            "editMap": [
+                "meta",
+                "validationCountAudio"
+            ],
+            "value": 1,
+            "timestamp": 1771407911004,
+            "type": "user-edit",
+            "author": "unknown"
+        },
+        {
+            "editMap": [
+                "meta",
+                "abbreviation"
+            ],
+            "value": "",
+            "timestamp": 1771407911004,
+            "type": "user-edit",
+            "author": "unknown"
+        },
+        {
+            "editMap": [
+                "languages"
+            ],
+            "value": [
+                {
+                    "name": {
+                        "en": "English"
+                    },
+                    "tag": "eng",
+                    "refName": "English",
+                    "projectStatus": "source"
+                },
+                {}
+            ],
+            "timestamp": 1771407911004,
+            "type": "user-edit",
+            "author": "unknown"
+        },
+        {
+            "editMap": [
+                "spellcheckIsEnabled"
+            ],
+            "value": false,
+            "timestamp": 1771407911004,
+            "type": "user-edit",
+            "author": "unknown"
+        }
+    ],
+    "spellcheckIsEnabled": false
+}

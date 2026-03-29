@@ -1,0 +1,112 @@
+/**
+ * Bottom Navigation Component
+ * Mobile-first navigation (< 768px)
+ * Transitions to sidebar on larger screens
+ */
+
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: var(--color-neutral-100);
+  border-top: 1px solid var(--color-neutral-300);
+  padding-bottom: var(--safe-area-inset-bottom);
+  z-index: var(--z-fixed);
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.bottom-nav__container {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: var(--space-2) var(--space-4);
+  max-width: var(--container-mobile);
+  margin: 0 auto;
+}
+
+.bottom-nav__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  min-width: var(--touch-target-min);
+  min-height: var(--touch-target-min);
+  text-decoration: none;
+  color: var(--color-neutral-700);
+  transition: color var(--transition-fast);
+  border-radius: var(--radius-md);
+  position: relative;
+}
+
+.bottom-nav__item:hover,
+.bottom-nav__item:focus-visible {
+  color: var(--color-primary-blue);
+  background-color: var(--color-neutral-200);
+}
+
+.bottom-nav__item--active {
+  color: var(--color-primary-blue);
+}
+
+.bottom-nav__item--active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 32px;
+  height: 3px;
+  background-color: var(--color-primary-blue);
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+}
+
+.bottom-nav__icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.bottom-nav__label {
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Badge for notifications */
+.bottom-nav__badge {
+  position: absolute;
+  top: var(--space-1);
+  right: var(--space-1);
+  background-color: var(--color-error-red);
+  color: var(--color-neutral-100);
+  font-size: 0.625rem;
+  font-weight: 600;
+  min-width: 18px;
+  height: 18px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--space-1);
+}
+
+/* Hide on tablet and desktop */
+@media (min-width: 768px) {
+  .bottom-nav {
+    display: none;
+  }
+}
+
+/* Adjust main content to account for bottom nav */
+.has-bottom-nav {
+  padding-bottom: calc(72px + var(--safe-area-inset-bottom));
+}
+
+@media (min-width: 768px) {
+  .has-bottom-nav {
+    padding-bottom: 0;
+  }
+}

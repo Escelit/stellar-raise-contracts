@@ -5,7 +5,7 @@ edition = "2021"
 publish = false
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 doctest = false
 
 [dependencies]
@@ -13,4 +13,5 @@ soroban-sdk = { workspace = true }
 
 [dev-dependencies]
 soroban-sdk = { workspace = true, features = ["testutils"] }
-proptest = "1.4"
+proptest = { workspace = true }
+proptest = "1.11.0"

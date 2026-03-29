@@ -1,0 +1,46 @@
+name: Mark Stale Issues and PRs
+on:
+  schedule:
+    - cron: "0 0 * * *" # runs daily at midnight UTC
+  workflow_dispatch: # allow manual trigger
+
+jobs:
+  stale:
+    name: Auto-close stale issues and PRs
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+
+    steps:
+      - name: Mark stale issues and pull requests
+        uses: actions/stale@v9
+        with:
+          days-before-stale: 30
+          days-before-close: 7
+          stale-issue-label: "stale"
+          stale-issue-message: >
+            👋 This issue has been inactive for 30 days and has been marked
+            as stale. If this is still relevant, please leave a comment or
+            update the issue to keep it open. It will be automatically closed
+            in 7 days if there is no further activity.
+          close-issue-message: >
+            🔒 This issue has been automatically closed due to inactivity.
+            If you believe this is still relevant, feel free to reopen it
+            with updated context.
+          stale-pr-label: "stale"
+          stale-pr-message: >
+            👋 This pull request has been inactive for 30 days and has been
+            marked as stale. If this is still in progress, please leave a
+            comment or push an update to keep it open. It will be
+            automatically closed in 7 days if there is no further activity.
+          close-pr-message: >
+            🔒 This pull request has been automatically closed due to
+            inactivity. If you would like to continue this work, feel free
+            to reopen it or open a new PR with updated changes.
+          exempt-issue-labels: "pinned,security,in-progress,blocked"
+          exempt-pr-labels: "pinned,security,in-progress,blocked"
+          exempt-all-milestones: true
+          remove-stale-when-updated: true
+          operations-per-run: 100
+          ascending: true

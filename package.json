@@ -1,0 +1,71 @@
+{
+  "name": "stellar-raise-contracts",
+  "private": true,
+  "scripts": {
+    "optimize:svg": "svgo --folder frontend/public/images/ --recursive --multipass --config svgo.config.js",
+    "test": "jest",
+    "test:coverage": "jest --coverage",
+    "test:watch": "jest --watch",
+    "lint": "tsc --noEmit",
+    "format": "prettier --write \"frontend/**/*.ts\" \"frontend/**/*.tsx\"",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@babel/preset-env": "^7.29.2",
+    "@babel/preset-react": "^7.28.5",
+    "@babel/preset-typescript": "^7.28.5",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/jest": "^30.0.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "husky": "^9.1.7",
+    "identity-obj-proxy": "^3.0.0",
+    "jest": "^30.3.0",
+    "jest-environment-jsdom": "^30.3.0",
+    "svgo": "^3.3.3",
+    "ts-jest": "^29.4.6",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+    "optimize:svg": "svgo --folder frontend/public/images/ --recursive --multipass --config svgo.config.js"
+    "format": "prettier --write \"frontend/**/*.ts\" \"frontend/**/*.tsx\""
+  },
+  "devDependencies": {
+    "@babel/preset-env": "^7.29.2",
+    "@babel/preset-react": "^7.28.5",
+    "@babel/preset-typescript": "^7.28.5",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/jest": "^30.0.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "husky": "^9.1.7",
+    "identity-obj-proxy": "^3.0.0",
+    "jest": "^30.3.0",
+    "jest-environment-jsdom": "^30.3.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "svgo": "^3.3.2",
+    "svgo": "^3.3.3",
+    "ts-jest": "^29.4.6",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  }
+}

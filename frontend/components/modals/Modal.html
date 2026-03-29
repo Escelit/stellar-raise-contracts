@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Modal Component - Stellar Raise</title>
+  <link rel="stylesheet" href="../../styles/responsive.css">
+  <link rel="stylesheet" href="Modal.css">
+  <link rel="stylesheet" href="../forms/Forms.css">
+</head>
+<body>
+  <!-- Example: Auth Modal -->
+  <div class="modal modal--auth modal--open" role="dialog" aria-labelledby="modal-title" aria-modal="true">
+    <div class="modal__backdrop" aria-hidden="true"></div>
+    <div class="modal__content">
+      <header class="modal__header">
+        <h2 class="modal__title" id="modal-title">Sign In</h2>
+        <button class="modal__close" aria-label="Close modal">
+          <svg class="modal__close-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </header>
+
+      <div class="modal__body">
+        <form class="form">
+          <div class="form__group">
+            <label for="email" class="form__label">Email Address</label>
+            <input 
+              type="email" 
+              id="email" 
+              class="form__input" 
+              placeholder="you@example.com"
+              required
+              autocomplete="email"
+            >
+          </div>
+
+          <div class="form__group">
+            <label for="password" class="form__label">Password</label>
+            <input 
+              type="password" 
+              id="password" 
+              class="form__input" 
+              placeholder="Enter your password"
+              required
+              autocomplete="current-password"
+            >
+          </div>
+
+          <div class="form__group">
+            <label class="form__checkbox">
+              <input type="checkbox" id="remember">
+              <span>Remember me</span>
+            </label>
+          </div>
+        </form>
+
+        <div style="margin-top: var(--space-4);">
+          <a href="/forgot-password" style="color: var(--color-primary-blue); font-size: var(--font-size-sm);">
+            Forgot password?
+          </a>
+        </div>
+      </div>
+
+      <footer class="modal__footer">
+        <button class="btn btn--secondary">Cancel</button>
+        <button class="btn btn--primary">Sign In</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Example: Confirmation Modal -->
+  <div class="modal modal--confirm" role="dialog" aria-labelledby="confirm-title" aria-modal="true">
+    <div class="modal__backdrop" aria-hidden="true"></div>
+    <div class="modal__content">
+      <header class="modal__header">
+        <h2 class="modal__title" id="confirm-title">Confirm Withdrawal</h2>
+        <button class="modal__close" aria-label="Close modal">
+          <svg class="modal__close-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </header>
+
+      <div class="modal__body">
+        <p style="margin-bottom: var(--space-4);">
+          You are about to withdraw <strong>5,000 XLM</strong> from your campaign.
+        </p>
+        <p style="color: var(--color-neutral-700); font-size: var(--font-size-sm);">
+          This action cannot be undone. Please confirm to proceed.
+        </p>
+      </div>
+
+      <footer class="modal__footer">
+        <button class="btn btn--secondary">Cancel</button>
+        <button class="btn btn--danger">Confirm Withdrawal</button>
+      </footer>
+    </div>
+  </div>
+
+  <script>
+    // Modal functionality
+    document.querySelectorAll('.modal__close, .modal__backdrop').forEach(element => {
+      element.addEventListener('click', function() {
+        const modal = this.closest('.modal');
+        modal.classList.remove('modal--open');
+        document.body.classList.remove('modal-open');
+      });
+    });
+
+    // Open modal function
+    function openModal(modalId) {
+      const modal = document.getElementById(modalId);
+      if (modal) {
+        modal.classList.add('modal--open');
+        document.body.classList.add('modal-open');
+      }
+    }
+  </script>
+</body>
+</html>

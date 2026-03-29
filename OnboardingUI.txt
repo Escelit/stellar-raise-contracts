@@ -1,0 +1,13 @@
+UX/UI Design: Crowdfund dApp Security Suite
+I designed the core authentication and recovery flows for Crowdfund dApp, focusing on building institutional trust through a high-fidelity "Security-First" aesthetic. The project balances deep obsidian tones with a vibrant "Action Green" to guide investor interactions.
+
+Key Contributions
+Adaptive Login Experience: Developed a sleek login interface featuring Quick Access via FaceID, designed to reduce friction for returning investors while maintaining a secure posture.
+
+Multi-Step Verification: Architected a clear, 3-step password recovery protocol that utilizes end-to-end encryption for all secure links, providing users with a sense of progress and safety.
+
+Trust Signal Integration: Strategically placed compliance markers, including ISO 27001 and SOC2 Type II certifications, to reinforce the platform’s "Protected by Multi-Factor Authentication" promise.
+
+Real-time System Status: Implemented global status indicators, such as the Network: Mainnet toggle and version tracking, ensuring transparency for decentralized operations
+
+figma link https://www.figma.com/design/jn7gzbffKmAWtrYAeDUgKh/Crowfund-Dapp-UI?node-id=0-1&p=f&t=rSlnndhCYxCpgNbZ-0

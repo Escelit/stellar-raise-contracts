@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <!--
+    viewport-fit=cover enables safe-area-inset-* env() values on notched devices.
+    Requirement 1.7 / Design spec §4.1
+  -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Header Component — Stellar Raise Demo</title>
+
+  <!-- 1. Design tokens and utilities must load before component CSS -->
+  <link rel="stylesheet" href="../../styles/responsive.css" />
+  <!-- 2. Component-specific styles -->
+  <link rel="stylesheet" href="Header.css" />
+
+  <style>
+    /* Demo-page chrome only — not part of the component */
+    body {
+      font-family: var(--font-family-primary);
+      color: var(--color-neutral-900);
+      background-color: var(--color-neutral-200);
+    }
+
+    .demo-content {
+      padding: var(--space-8) var(--space-4);
+    }
+
+    .demo-content h1 {
+      font-size: var(--font-size-2xl);
+      color: var(--color-deep-navy);
+      margin-bottom: var(--space-4);
+    }
+
+    .demo-content p {
+      font-size: var(--font-size-base);
+      line-height: 1.6;
+      max-width: 60ch;
+      margin-bottom: var(--space-4);
+    }
+  </style>
+</head>
+<body>
+
+  <!--
+    site-header: role="banner" satisfies WCAG 4.1.2 landmark requirement.
+    Requirement 4.1
+  -->
+  <header class="site-header" role="banner">
+
+    <!--
+      Skip link: first focusable child.
+      Visually hidden until focused; moves keyboard focus to #main-content.
+      Requirement 4.2 / Property 8
+    -->
+    <a href="#main-content" class="site-header__skip-link">Skip to main content</a>
+
+    <div class="site-header__inner">
+
+      <!-- Brand identity: logo SVG + "Stellar Raise" name -->
+      <a href="/" class="site-header__brand" aria-label="Stellar Raise — home">
+        <!--
+          Decorative SVG logo; aria-hidden prevents screen-reader duplication
+          since the parent <a> already has an aria-label.
+    Requirement 1.7 / design spec.
+  -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Header Component — Stellar Raise</title>
+
+  <!--
+    Load order matters: responsive.css defines all design tokens;
+    Header.css consumes them. BottomNav.css and Sidebar.css are included
+    so the co-existence layout (.has-header, .has-bottom-nav, .has-sidebar)
+    can be demonstrated in this demo page.
+  -->
+  <link rel="stylesheet" href="../../styles/responsive.css" />
+  <link rel="stylesheet" href="../../styles/utilities.css" />
+  <link rel="stylesheet" href="Header.css" />
+  <link rel="stylesheet" href="BottomNav.css" />
+  <link rel="stylesheet" href="Sidebar.css" />
+</head>
+<body>
+
+  <!-- ================================================================
+       SITE HEADER
+       role="banner" satisfies WCAG 2.1 SC 1.3.6 (Identify Purpose)
+       and Requirement 4.1.
+       ================================================================ -->
+  <header class="site-header" role="banner">
+
+    <!--
+      Skip navigation link — first focusable child.
+      Requirement 4.2 / Property 8: activating this link moves keyboard
+      focus to #main-content, bypassing the header landmark.
+    -->
+    <a href="#main-content" class="site-header__skip-link">
+      Skip to main content
+    </a>
+
+    <div class="site-header__inner">
+
+      <!-- Brand identity (Requirement 1.1) -->
+      <a href="/" class="site-header__brand" aria-label="Stellar Raise — home">
+        <!--
+          Decorative logo mark. aria-hidden="true" prevents screen readers
+          from announcing the SVG internals; the parent <a> aria-label
+          provides the accessible name.
+        -->
+        <svg
+          class="site-header__logo"
+          width="32"
+          height="32"
+          viewBox="0 0 32 32"
+          fill="none"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <circle cx="16" cy="16" r="16" fill="var(--color-primary-blue)" />
+          <path d="M16 8L20 16L16 24L12 16L16 8Z" fill="var(--color-neutral-100)" />
+          <path d="M16 8L20 16L16 24L12 16L16 8Z" fill="white" />
+        </svg>
+        <span class="site-header__brand-name">Stellar Raise</span>
+      </a>
+
+      <!--
+        Actions slot: contextual elements (e.g. wallet connect button).
+        Empty in this demo; populated by the consuming application.
+      -->
+      <div class="site-header__actions">
+        <!-- Slot for wallet connect button or other contextual actions -->
+        Contextual actions slot — empty in this demo.
+        Consumers can inject a wallet-connect button here.
+        All children must meet the 44×44 px touch-target minimum
+        (Requirement 4.3 / Property 5).
+      -->
+      <div class="site-header__actions" aria-label="Header actions">
+        <!-- e.g. <button class="btn btn--primary touch-target">Connect Wallet</button> -->
+      </div>
+
+    </div>
+  </header>
+
+  <!--
+    Main content:
+      .has-header   → padding-top = header height + safe-area-inset-top (mobile)
+      .has-bottom-nav → padding-bottom = 72px + safe-area-inset-bottom (mobile)
+    Both classes reset to 0 at ≥ 768px (sidebar layout takes over).
+  -->
+  <main id="main-content" class="has-header has-bottom-nav" tabindex="-1">
+    <div class="demo-content container">
+      <h1>Header Component Demo</h1>
+      <p>
+        Resize the viewport below 768 px to see the fixed header.
+        At 768 px and above the header hides and the sidebar provides brand identity.
+      </p>
+      <p>
+        Press <kbd>Tab</kbd> to reach the skip link, then <kbd>Enter</kbd> to jump
+        directly to this content area.
+      </p>
+      <p>
+        Scroll down to observe the <code>.site-header--scrolled</code> shadow
+        elevation change (driven by the inline script below).
+      </p>
+      <!-- Filler content to enable scroll testing -->
+      <p style="margin-top: var(--space-16);">— end of demo content —</p>
+    </div>
+  </main>
+
+  <!--
+    Scroll shadow toggle.
+    Passive listener for performance; toggles .site-header--scrolled
+    which switches box-shadow from --shadow-sm to --shadow-md.
+    Requirement 3.4 / Design spec §Data Models
+  -->
+  <!-- ================================================================
+       SIDEBAR (tablet/desktop ≥ 768px)
+       Provides brand identity on larger viewports where the header
+       is hidden (Property 2 — mutual exclusivity).
+       ================================================================ -->
+  <aside class="sidebar" aria-label="Main navigation">
+    <div class="sidebar__header">
+      <div class="sidebar__logo">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden="true" focusable="false">
+          <circle cx="16" cy="16" r="16" fill="var(--color-primary-blue)" />
+          <path d="M16 8L20 16L16 24L12 16L16 8Z" fill="white" />
+        </svg>
+        <span class="sidebar__brand">Stellar Raise</span>
+      </div>
+    </div>
+    <nav class="sidebar__nav" aria-label="Primary">
+      <a href="/dashboard" class="sidebar__item sidebar__item--active" aria-current="page">
+        <svg class="sidebar__icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" focusable="false">
+          <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm0 6a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1v-2zm0 6a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1v-2z" />
+        </svg>
+        <span class="sidebar__label">Dashboard</span>
+      </a>
+      <a href="/invest" class="sidebar__item">
+        <svg class="sidebar__icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" focusable="false">
+          <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zm6-4a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zm6-3a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
+        </svg>
+        <span class="sidebar__label">Invest</span>
+      </a>
+      <a href="/docs" class="sidebar__item">
+        <svg class="sidebar__icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" focusable="false">
+          <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
+        </svg>
+        <span class="sidebar__label">Docs</span>
+      </a>
+    </nav>
+    <div class="sidebar__footer">
+      <div class="sidebar__security">
+        <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" focusable="false">
+          <path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+        </svg>
+        <span class="sidebar__security-text">Secured with E2E Encryption</span>
+      </div>
+      <div class="sidebar__version">v1.0.0</div>
+    </div>
+  </aside>
+
+  <!-- ================================================================
+       BOTTOM NAVIGATION (mobile < 768px)
+       Co-exists with the header on mobile viewports.
+       .has-bottom-nav on <main> adds padding-bottom so content is
+       never obscured (Requirement 2.1 / Property 3).
+       ================================================================ -->
+  <nav class="bottom-nav" aria-label="Mobile navigation">
+    <div class="bottom-nav__container">
+      <a href="/dashboard" class="bottom-nav__item bottom-nav__item--active" aria-current="page" aria-label="Dashboard">
+        <svg class="bottom-nav__icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
+          <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" />
+        </svg>
+        <span class="bottom-nav__label">Dashboard</span>
+      </a>
+      <a href="/invest" class="bottom-nav__item" aria-label="Invest">
+        <svg class="bottom-nav__icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
+          <path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z" />
+        </svg>
+        <span class="bottom-nav__label">Invest</span>
+      </a>
+      <a href="/docs" class="bottom-nav__item" aria-label="Docs">
+        <svg class="bottom-nav__icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
+          <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" />
+        </svg>
+        <span class="bottom-nav__label">Docs</span>
+      </a>
+    </div>
+  </nav>
+
+  <!-- ================================================================
+       MAIN CONTENT
+       id="main-content" is the skip-link target (Requirement 4.2).
+       .has-header  — padding-top offsets the fixed header (mobile only).
+       .has-bottom-nav — padding-bottom offsets the fixed bottom nav.
+       .has-sidebar — margin-left offsets the fixed sidebar (tablet+).
+       ================================================================ -->
+  <main
+    id="main-content"
+    class="has-header has-bottom-nav has-sidebar"
+    tabindex="-1"
+  >
+    <div class="container" style="padding-top: var(--space-8); padding-bottom: var(--space-8);">
+
+      <h1 class="text-2xl font-bold" style="color: var(--color-deep-navy); margin-bottom: var(--space-4);">
+        Header Component Demo
+      </h1>
+
+      <p class="text-base" style="color: var(--color-neutral-700); margin-bottom: var(--space-6);">
+        Resize the browser window to observe the responsive behaviour:
+      </p>
+
+      <ul style="list-style: disc; padding-left: var(--space-6); color: var(--color-neutral-700); line-height: 2;">
+        <li><strong>&lt; 768 px (mobile)</strong> — Site header visible at top, BottomNav visible at bottom.</li>
+        <li><strong>≥ 768 px (tablet)</strong> — Site header hidden, Sidebar visible on the left.</li>
+        <li><strong>≥ 1024 px (desktop)</strong> — Sidebar widens to 280 px.</li>
+      </ul>
+
+      <!-- Filler content to allow scroll-shadow testing -->
+      <div style="margin-top: var(--space-8);">
+        <p class="text-sm" style="color: var(--color-neutral-700);">
+          Scroll down to trigger the <code>.site-header--scrolled</code> modifier,
+          which elevates the header shadow from <code>--shadow-sm</code> to <code>--shadow-md</code>.
+        </p>
+      </div>
+
+      <!-- Spacer to enable scrolling -->
+      <div style="height: 200vh;" aria-hidden="true"></div>
+
+    </div>
+  </main>
+
+  <!-- ================================================================
+       SCROLL SHADOW TOGGLE
+       Passive scroll listener toggles .site-header--scrolled when
+       window.scrollY > 0. Requirement 3.4 / design spec.
+       ================================================================ -->
+  <script>
+    (function () {
+      var header = document.querySelector('.site-header');
+      if (!header) return;
+      window.addEventListener('scroll', function () {
+        header.classList.toggle('site-header--scrolled', window.scrollY > 0);
+      }, { passive: true });
+
+      function onScroll() {
+        header.classList.toggle('site-header--scrolled', window.scrollY > 0);
+      }
+
+      window.addEventListener('scroll', onScroll, { passive: true });
+
+      // Initialise on load in case the page is already scrolled
+      onScroll();
+    }());
+  </script>
+
+</body>
+</html>

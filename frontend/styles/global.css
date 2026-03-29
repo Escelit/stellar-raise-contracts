@@ -1,0 +1,40 @@
+/* =============================================
+   Custom Scrollbar Styles
+   Supported: Chrome, Edge, Safari (webkit)
+   Firefox uses scrollbar-width and scrollbar-color
+   ============================================= */
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #4f46e5 #e5e7eb;
+}
+
+/* Webkit browsers: Chrome, Edge, Safari */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: #e5e7eb;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #4f46e5;
+  border-radius: 999px;
+  border: 2px solid #e5e7eb;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #4338ca;
+}
+
+::-webkit-scrollbar-thumb:active {
+  background-color: #3730a3;
+}
+
+::-webkit-scrollbar-corner {
+  background-color: #e5e7eb;
+}

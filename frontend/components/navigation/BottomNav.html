@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Bottom Navigation - Stellar Raise</title>
+  <link rel="stylesheet" href="../../styles/responsive.css">
+  <link rel="stylesheet" href="BottomNav.css">
+</head>
+<body>
+  <!-- Bottom Navigation Component -->
+  <nav class="bottom-nav" role="navigation" aria-label="Main navigation">
+    <div class="bottom-nav__container">
+      
+      <a href="/home" class="bottom-nav__item bottom-nav__item--active" aria-current="page">
+        <svg class="bottom-nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+          <polyline points="9 22 9 12 15 12 15 22"></polyline>
+        </svg>
+        <span class="bottom-nav__label">Home</span>
+      </a>
+
+      <a href="/savings" class="bottom-nav__item">
+        <svg class="bottom-nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M12 6v6l4 2"></path>
+        </svg>
+        <span class="bottom-nav__label">Savings</span>
+      </a>
+
+      <a href="/activity" class="bottom-nav__item">
+        <svg class="bottom-nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+        </svg>
+        <span class="bottom-nav__label">Activity</span>
+        <span class="bottom-nav__badge" aria-label="3 new notifications">3</span>
+      </a>
+
+      <a href="/profile" class="bottom-nav__item">
+        <svg class="bottom-nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+        <span class="bottom-nav__label">Profile</span>
+      </a>
+
+    </div>
+  </nav>
+
+  <!-- Example content with bottom nav spacing -->
+  <main class="has-bottom-nav">
+    <div class="container" style="padding-top: var(--space-8);">
+      <h1>Bottom Navigation Example</h1>
+      <p>This content is automatically spaced to account for the bottom navigation bar.</p>
+    </div>
+  </main>
+</body>
+</html>

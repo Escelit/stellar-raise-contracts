@@ -1,0 +1,15 @@
+I worked on the landing page for Crowdfund dApp, focusing on creating a high-trust, conversion-oriented gateway for decentralized community finance. My primary objective was to translate complex blockchain concepts into a modern, accessible, and secure user experience.
+
+Key Contributions
+Hero Section Design: Crafted the "Building the future of Community Finance" hero section, emphasizing decentralized financial support with a clear call-to-action for investors and creators.
+
+Trust & Value Prop Architecture: Defined "The Pillars of Decentralized Finance," highlighting on-chain transparency, modern tech-first aesthetics, and community-focused growth.
+
+Integrated Security Visuals: Designed the "Security without Compromise" module, which showcases high-fidelity mockups of biometric authentication, advanced 2FA, and immutable activity logs to reassure institutional investors.
+
+Compliance & Social Proof: Strategically placed trust signals, including audited smart contract badges and 50,000+ backer testimonials, to reinforce the platform’s reliability.
+
+Navigation & Accessibility: Implemented a minimalist navigation system featuring "Network: Mainnet" status indicators and a "Launch App" shortcut to streamline the user journey from landing to investing.
+
+figma link https://www.figma.com/design/jn7gzbffKmAWtrYAeDUgKh/Crowfund-Dapp-UI?node-id=8-4&t=rSlnndhCYxCpgNbZ-0
+

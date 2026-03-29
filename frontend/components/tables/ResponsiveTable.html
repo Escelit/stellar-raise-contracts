@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Responsive Tables - Stellar Raise</title>
+  <link rel="stylesheet" href="../../styles/responsive.css">
+  <link rel="stylesheet" href="ResponsiveTable.css">
+</head>
+<body>
+  <div class="container" style="padding: var(--space-8) var(--space-4);">
+    
+    <h1 style="margin-bottom: var(--space-6);">Account Activity Log</h1>
+
+    <!-- Responsive Table (transforms to cards on mobile) -->
+    <div class="responsive-table-wrapper">
+      <table class="responsive-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Type</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th>Transaction ID</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="Date">2026-02-20</td>
+            <td data-label="Type">Contribution</td>
+            <td data-label="Amount">500 XLM</td>
+            <td data-label="Status">
+              <span class="status-badge status-badge--success">Success</span>
+            </td>
+            <td data-label="Transaction ID">
+              <code style="font-size: var(--font-size-xs);">ABC123...XYZ789</code>
+            </td>
+          </tr>
+          <tr>
+            <td data-label="Date">2026-02-19</td>
+            <td data-label="Type">Withdrawal</td>
+            <td data-label="Amount">1,000 XLM</td>
+            <td data-label="Status">
+              <span class="status-badge status-badge--success">Success</span>
+            </td>
+            <td data-label="Transaction ID">
+              <code style="font-size: var(--font-size-xs);">DEF456...UVW012</code>
+            </td>
+          </tr>
+          <tr>
+            <td data-label="Date">2026-02-18</td>
+            <td data-label="Type">Refund</td>
+            <td data-label="Amount">250 XLM</td>
+            <td data-label="Status">
+              <span class="status-badge status-badge--pending">Pending</span>
+            </td>
+            <td data-label="Transaction ID">
+              <code style="font-size: var(--font-size-xs);">GHI789...RST345</code>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 style="margin-top: var(--space-12); margin-bottom: var(--space-6);">Recent Transactions</h2>
+
+    <!-- Transaction Cards -->
+    <div class="transaction-list">
+      <article class="transaction-card">
+        <div class="transaction-card__header">
+          <div class="transaction-card__type">Campaign Contribution</div>
+          <div class="transaction-card__amount transaction-card__amount--negative">-500 XLM</div>
+        </div>
+        <div class="transaction-card__details">
+          <div class="transaction-card__detail">
+            <span class="transaction-card__label">Date</span>
+            <span class="transaction-card__value">Feb 20, 2026</span>
+          </div>
+          <div class="transaction-card__detail">
+            <span class="transaction-card__label">Campaign</span>
+            <span class="transaction-card__value">Solar Energy Project</span>
+          </div>
+          <div class="transaction-card__detail">
+            <span class="transaction-card__label">Status</span>
+            <span class="status-badge status-badge--success">Success</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="transaction-card">
+        <div class="transaction-card__header">
+          <div class="transaction-card__type">Campaign Withdrawal</div>
+          <div class="transaction-card__amount transaction-card__amount--positive">+1,000 XLM</div>
+        </div>
+        <div class="transaction-card__details">
+          <div class="transaction-card__detail">
+            <span class="transaction-card__label">Date</span>
+            <span class="transaction-card__value">Feb 19, 2026</span>
+          </div>
+          <div class="transaction-card__detail">
+            <span class="transaction-card__label">Campaign</span>
+            <span class="transaction-card__value">Community Garden</span>
+          </div>
+          <div class="transaction-card__detail">
+            <span class="transaction-card__label">Status</span>
+            <span class="status-badge status-badge--success">Success</span>
+          </div>
+        </div>
+      </article>
+    </div>
+
+    <h2 style="margin-top: var(--space-12); margin-bottom: var(--space-6);">Active Campaigns</h2>
+
+    <!-- Horizontal Scroll List (mobile) / Grid (desktop) -->
+    <div class="scroll-list">
+      <article class="scroll-list__item">
+        <h3 style="font-size: var(--font-size-lg); margin-bottom: var(--space-2);">Solar Energy</h3>
+        <p style="color: var(--color-neutral-700); font-size: var(--font-size-sm); margin-bottom: var(--space-4);">
+          Clean energy for rural communities
+        </p>
+        <div style="display: flex; justify-content: space-between; margin-bottom: var(--space-2);">
+          <span style="font-size: var(--font-size-sm); color: var(--color-neutral-700);">Progress</span>
+          <span style="font-size: var(--font-size-sm); font-weight: 600;">75%</span>
+        </div>
+        <div style="height: 8px; background-color: var(--color-neutral-300); border-radius: var(--radius-full); overflow: hidden;">
+          <div style="width: 75%; height: 100%; background-color: var(--color-success-green);"></div>
+        </div>
+      </article>
+
+      <article class="scroll-list__item">
+        <h3 style="font-size: var(--font-size-lg); margin-bottom: var(--space-2);">Community Garden</h3>
+        <p style="color: var(--color-neutral-700); font-size: var(--font-size-sm); margin-bottom: var(--space-4);">
+          Urban farming initiative
+        </p>
+        <div style="display: flex; justify-content: space-between; margin-bottom: var(--space-2);">
+          <span style="font-size: var(--font-size-sm); color: var(--color-neutral-700);">Progress</span>
+          <span style="font-size: var(--font-size-sm); font-weight: 600;">100%</span>
+        </div>
+        <div style="height: 8px; background-color: var(--color-neutral-300); border-radius: var(--radius-full); overflow: hidden;">
+          <div style="width: 100%; height: 100%; background-color: var(--color-success-green);"></div>
+        </div>
+      </article>
+
+      <article class="scroll-list__item">
+        <h3 style="font-size: var(--font-size-lg); margin-bottom: var(--space-2);">Education Fund</h3>
+        <p style="color: var(--color-neutral-700); font-size: var(--font-size-sm); margin-bottom: var(--space-4);">
+          Scholarships for students
+        </p>
+        <div style="display: flex; justify-content: space-between; margin-bottom: var(--space-2);">
+          <span style="font-size: var(--font-size-sm); color: var(--color-neutral-700);">Progress</span>
+          <span style="font-size: var(--font-size-sm); font-weight: 600;">45%</span>
+        </div>
+        <div style="height: 8px; background-color: var(--color-neutral-300); border-radius: var(--radius-full); overflow: hidden;">
+          <div style="width: 45%; height: 100%; background-color: var(--color-primary-blue);"></div>
+        </div>
+      </article>
+    </div>
+
+  </div>
+</body>
+</html>

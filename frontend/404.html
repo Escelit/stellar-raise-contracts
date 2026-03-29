@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0066FF">
+  <meta name="description" content="Page not found - Stellar Raise">
+  <title>404 - Page Not Found | Stellar Raise</title>
+  
+  <!-- Responsive Design System -->
+  <link rel="stylesheet" href="styles/responsive.css">
+  
+  <!-- Space Grotesk Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    /* 404 Page Specific Styles */
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--color-neutral-200);
+      font-family: var(--font-family-primary);
+      color: var(--color-neutral-900);
+    }
+
+    .container-404 {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: var(--space-6);
+      text-align: center;
+    }
+
+    .error-content {
+      max-width: 500px;
+      width: 100%;
+    }
+
+    .error-code {
+      font-size: var(--font-size-3xl);
+      font-weight: 700;
+      color: var(--color-primary-blue);
+      margin: 0;
+      line-height: 1.1;
+    }
+
+    @media (min-width: 768px) {
+      .error-code {
+        font-size: clamp(3rem, 5vw, 6.5rem);
+      }
+    }
+
+    .error-title {
+      font-size: var(--font-size-2xl);
+      font-weight: 600;
+      color: var(--color-neutral-900);
+      margin: var(--space-6) 0 var(--space-4) 0;
+    }
+
+    .error-message {
+      font-size: var(--font-size-base);
+      color: var(--color-neutral-700);
+      margin: 0 0 var(--space-8) 0;
+      line-height: 1.6;
+    }
+
+    .error-icon {
+      width: 120px;
+      height: 120px;
+      margin: 0 auto var(--space-6);
+      opacity: 0.1;
+    }
+
+    .button-return {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background-color: var(--color-primary-blue);
+      color: var(--color-neutral-100);
+      border: none;
+      padding: var(--space-4) var(--space-10);
+      border-radius: 0.5rem;
+      font-size: var(--font-size-base);
+      font-weight: 600;
+      font-family: var(--font-family-primary);
+      cursor: pointer;
+      text-decoration: none;
+      transition: 
+        background-color var(--transition-base),
+        transform var(--transition-base),
+        box-shadow var(--transition-base);
+      box-shadow: 0 2px 8px rgba(0, 102, 255, 0.15);
+      min-height: var(--touch-target-min);
+    }
+
+    .button-return:hover {
+      background-color: #0052CC;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 102, 255, 0.25);
+    }
+
+    .button-return:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 8px rgba(0, 102, 255, 0.15);
+    }
+
+    .button-return:focus {
+      outline: 2px solid var(--color-primary-blue);
+      outline-offset: 2px;
+    }
+
+    /* Responsive Adjustments */
+    @media (max-width: 767px) {
+      .container-404 {
+        padding: var(--space-4);
+      }
+
+      .error-code {
+        font-size: clamp(2.5rem, 10vw, 3.5rem);
+      }
+
+      .error-title {
+        font-size: var(--font-size-xl);
+      }
+
+      .button-return {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="container-404">
+    <div class="error-content">
+      <!-- Decorative Icon -->
+      <svg class="error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+
+      <!-- Error Code -->
+      <h1 class="error-code">404</h1>
+
+      <!-- Error Title -->
+      <h2 class="error-title">Page Not Found</h2>
+
+      <!-- Error Message -->
+      <p class="error-message">
+        Oops! The page you are looking for does not exist or has been moved.
+      </p>
+
+      <!-- Return to Home Button -->
+      <a href="/" class="button-return">
+        Return to Home
+      </a>
+    </div>
+  </main>
+</body>
+</html>

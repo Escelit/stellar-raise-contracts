@@ -1,0 +1,321 @@
+/**
+ * Header Component — Site-level responsive header
+ *
+ * Breakpoint behaviour (mirrors BottomNav / Sidebar pattern):
+ *   < 768px  (mobile)  → Header visible, BottomNav visible, Sidebar hidden
+ *   ≥ 768px  (tablet+) → Header hidden,  Sidebar visible,  BottomNav hidden
+ *
+ * All values reference design tokens from responsive.css.
+ * Hard-coded literals are intentionally absent (Property 4 compliance).
+ */
+
+/* ============================================================
+   BASE — mobile-first, fixed at top of viewport
+   Tokens: --z-fixed, --color-neutral-100, --shadow-sm,
+           --transition-fast, --safe-area-inset-top, --space-4
+   ============================================================ */
+
+.site-header {
+ * Site Header Component — frontend/components/navigation/Header.css
+ *
+ * Responsive, fixed page-level header for the Stellar Raise crowdfunding dApp.
+ *
+ * Breakpoint behaviour (mirrors BottomNav / Sidebar co-existence model):
+ *   < 768px  (mobile)  — Header VISIBLE, BottomNav visible, Sidebar hidden
+ *   ≥ 768px  (tablet)  — Header HIDDEN,  Sidebar visible,  BottomNav hidden
+ *   ≥ 1024px (desktop) — Header HIDDEN,  Sidebar visible (280px), BottomNav hidden
+ *
+ * All colour, spacing, typography, shadow, and z-index values reference
+ * CSS custom properties defined in frontend/styles/responsive.css.
+ * Hard-coded literals are intentionally absent (Requirement 3.6 / Property 4).
+ *
+ * @see frontend/styles/responsive.css  — design tokens
+ * @see frontend/styles/utilities.css   — utility classes (.hidden, .block, etc.)
+ * @see BottomNav.css                   — peer mobile navigation component
+ * @see Sidebar.css                     — peer tablet/desktop navigation component
+ */
+
+/* ============================================================
+   BASE — .site-header
+   Mobile-first: visible and fixed at the top of the viewport.
+   Token refs: --z-fixed, --color-neutral-100, --header-height,
+               --shadow-sm, --transition-fast, --safe-area-inset-top,
+               --space-4
+   ============================================================ */
+
+.site-header {
+  /* Fixed positioning — stays at top while page scrolls (Requirement 1.6) */
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: var(--z-fixed);
+
+  /* Height driven by the per-breakpoint alias in responsive.css */
+  height: var(--header-height);
+
+  background-color: var(--color-neutral-100);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition-fast);
+
+  /* Safe-area inset for notched / rounded-corner devices */
+  padding-top: var(--safe-area-inset-top, 0px);
+  /* Height driven by the per-breakpoint alias token (Requirements 1.2–1.4) */
+  height: var(--header-height);
+
+  /* Background and resting shadow (Requirements 3.1, 3.4) */
+  background-color: var(--color-neutral-100);
+  box-shadow: var(--shadow-sm);
+
+  /* Shadow transition on scroll (Requirement 3.3) */
+  transition: box-shadow var(--transition-fast);
+
+  /* Safe-area inset for notched/rounded-corner devices (Requirement 1.7) */
+  padding-top: var(--safe-area-inset-top);
+
+  /* Horizontal padding from spacing scale (Requirement 1.5) */
+  padding-left: var(--space-4);
+  padding-right: var(--space-4);
+}
+
+/* ============================================================
+   SCROLLED MODIFIER — elevated shadow when page is scrolled
+   Tokens: --shadow-md
+   ============================================================ */
+
+.site-header--scrolled {
+   SCROLL STATE — .site-header--scrolled
+   Toggled by the inline scroll listener in Header.html.
+   Token refs: --shadow-md
+   ============================================================ */
+
+.site-header--scrolled {
+  /* Elevated shadow when page is scrolled beyond 0px (Requirement 3.4) */
+  box-shadow: var(--shadow-md);
+}
+
+/* ============================================================
+   REDUCED MOTION — suppress transition for users who prefer it
+   Requirement 4.6 / Property 7
+   REDUCED MOTION — suppress transitions
+   Requirement 4.6: transition-duration ≤ 0.01ms when
+   prefers-reduced-motion: reduce is active.
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .site-header {
+    transition-duration: 0.01ms;
+  }
+}
+
+/* ============================================================
+   TABLET+ — header hidden; Sidebar provides brand identity
+   Breakpoint: ≥ 768px  (--breakpoint-mobile)
+   ============================================================ */
+
+   TABLET & DESKTOP — hide header when Sidebar is present
+   Requirement 1.3 / 1.4 / 2.2 / Property 2:
+   Header and Sidebar are mutually exclusive.
+   ============================================================ */
+
+/* Breakpoint: tablet (≥ 768px) — header hidden, Sidebar takes over */
+@media (min-width: 768px) {
+  .site-header {
+    display: none;
+  }
+}
+
+/* ============================================================
+   INNER LAYOUT — flex row: brand left, actions right
+   Tokens: --space-4
+   INNER LAYOUT — .site-header__inner
+   Flex row: brand identity on the left, actions slot on the right.
+   Token refs: --space-4
+   ============================================================ */
+
+.site-header__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;
+  gap: var(--space-4);
+}
+
+/* ============================================================
+   BRAND — logo + name
+   Tokens: --space-3, --font-family-primary, --font-size-lg,
+           --color-deep-navy
+
+  /* Fill the full header height (minus safe-area padding-top) */
+  height: 100%;
+}
+
+/* ============================================================
+   SKIP NAVIGATION LINK — .site-header__skip-link
+   First focusable child; visually hidden until focused.
+   Requirements 4.2, 4.5 / Property 8.
+   Token refs: --color-neutral-100, --color-deep-navy,
+               --color-primary-blue, --space-2, --space-4,
+               --radius-md, --shadow-md
+   ============================================================ */
+
+.site-header__skip-link {
+  /* Visually hidden (sr-only pattern) — not in layout flow */
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+
+  /* Reveal on keyboard focus (Requirement 4.2) */
+  color: var(--color-deep-navy);
+  background-color: var(--color-neutral-100);
+  text-decoration: none;
+  font-family: var(--font-family-primary);
+  font-weight: var(--font-weight-semibold, 600);
+}
+
+.site-header__skip-link:focus-visible {
+  /* Restore to visible, positioned above the header content */
+  position: fixed;
+  top: calc(var(--safe-area-inset-top) + var(--space-2));
+  left: var(--space-4);
+  width: auto;
+  height: auto;
+  padding: var(--space-2) var(--space-4);
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  z-index: calc(var(--z-fixed) + 1);
+
+  /* Focus indicator (Requirement 4.5 / Property 6) */
+  outline: 2px solid var(--color-primary-blue);
+  outline-offset: 2px;
+}
+
+/* ============================================================
+   BRAND — .site-header__brand
+   Flex row: SVG logo mark + "Stellar Raise" text.
+   Token refs: --space-3
+   ============================================================ */
+
+.site-header__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  text-decoration: none;
+}
+
+.site-header__logo {
+  flex-shrink: 0;
+  /* aria-hidden on the SVG; decorative only */
+}
+
+
+  /* Ensure the brand link meets touch-target minimum (Requirement 4.3) */
+  min-height: var(--touch-target-min);
+  text-decoration: none;
+}
+
+/* ============================================================
+   LOGO — .site-header__logo
+   Decorative SVG; aria-hidden="true" in markup.
+   ============================================================ */
+
+.site-header__logo {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+}
+
+/* ============================================================
+   BRAND NAME — .site-header__brand-name
+   "Stellar Raise" wordmark.
+   Token refs: --font-family-primary, --font-size-lg,
+               --color-deep-navy
+   Requirements 1.1, 3.1, 3.2
+   ============================================================ */
+
+.site-header__brand-name {
+  font-family: var(--font-family-primary);
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--color-deep-navy);
+  white-space: nowrap;
+}
+
+/* ============================================================
+   ACTIONS SLOT — right-aligned contextual actions
+   Tokens: --space-2
+   ACTIONS SLOT — .site-header__actions
+   Right-aligned area for contextual controls (e.g. wallet button).
+   Token refs: --space-2
+   ============================================================ */
+
+.site-header__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+/* ============================================================
+   SKIP LINK — first focusable child; visually hidden until focused
+   Tokens: --color-neutral-100, --color-deep-navy,
+           --color-primary-blue, --space-2, --space-4,
+           --radius-md, --font-size-sm
+   Requirement 4.2 / Property 8
+   ============================================================ */
+
+.site-header__skip-link {
+  /* Visually hidden (sr-only pattern) */
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.site-header__skip-link:focus-visible {
+  /* Revealed on keyboard focus */
+  position: fixed;
+  top: var(--space-2);
+  left: var(--space-4);
+  width: auto;
+  height: auto;
+  padding: var(--space-2) var(--space-4);
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+
+  background-color: var(--color-neutral-100);
+  color: var(--color-deep-navy);
+  font-family: var(--font-family-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  outline: 2px solid var(--color-primary-blue);
+  outline-offset: 2px;
+  z-index: calc(var(--z-fixed) + 1);
+   FOCUS INDICATORS — all interactive children
+   Requirement 4.5 / Property 6:
+   outline: 2px solid var(--color-primary-blue); outline-offset: 2px
+   ============================================================ */
+
+.site-header a:focus-visible,
+.site-header button:focus-visible {
+  outline: 2px solid var(--color-primary-blue);
+  outline-offset: 2px;
+}

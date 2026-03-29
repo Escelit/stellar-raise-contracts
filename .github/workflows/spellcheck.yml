@@ -1,0 +1,75 @@
+name: Spellcheck
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+
+jobs:
+  spellcheck:
+    name: Spellcheck Markdown & YAML
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run spellcheck
+        uses: streetsidesoftware/cspell-action@v6
+        with:
+          files: "**/*.{md,yml,yaml}"
+          config: .cspell.json
+          incremental_files_only: false
+name: Spell Check
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+  pull_request:
+    branches:
+      - develop
+      - main
+
+jobs:
+  spellcheck:
+    name: Check spelling
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Run spell check
+        uses: check-spelling/check-spelling@main
+        with:
+          config: .github/spellcheck
+          post_comment: true
+          experimental_apply_changes_via_bot: true
+          extra_dictionaries: |
+            cspell:software-terms/dict/softwareTerms.txt
+            cspell:typescript/dict/typescript.txt
+            cspell:css/dict/css.txt
+            cspell:html/dict/html.txt
+            cspell:npm/dict/npm.txt
+          post_comment: false
+          experimental_apply_changes_via_bot: false
+# Spellcheck workflow
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+
+jobs:
+  spellcheck:
+    name: Spellcheck Markdown & YAML
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run spellcheck
+        uses: streetsidesoftware/cspell-action@v6
+        with:
+          files: "**/*.{md,yml,yaml}"
+          config: .cspell.json
+          incremental_files_only: false

@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0066FF">
+  <title>Component Showcase - Stellar Raise</title>
+  
+  <link rel="stylesheet" href="../styles/responsive.css">
+  <link rel="stylesheet" href="../styles/utilities.css">
+  <link rel="stylesheet" href="navigation/BottomNav.css">
+  <link rel="stylesheet" href="navigation/Sidebar.css">
+  <link rel="stylesheet" href="forms/Forms.css">
+  <link rel="stylesheet" href="modals/Modal.css">
+  <link rel="stylesheet" href="tables/ResponsiveTable.css">
+  
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    .showcase-section {
+      margin-bottom: var(--space-12);
+      padding: var(--space-6);
+      background-color: var(--color-neutral-100);
+      border: 1px solid var(--color-neutral-300);
+      border-radius: var(--radius-lg);
+    }
+    
+    .showcase-title {
+      font-size: var(--font-size-xl);
+      font-weight: 700;
+      color: var(--color-deep-navy);
+      margin-bottom: var(--space-4);
+      padding-bottom: var(--space-3);
+      border-bottom: 2px solid var(--color-primary-blue);
+    }
+    
+    .showcase-subtitle {
+      font-size: var(--font-size-lg);
+      font-weight: 600;
+      color: var(--color-deep-navy);
+      margin-top: var(--space-6);
+      margin-bottom: var(--space-3);
+    }
+    
+    .color-swatch {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3);
+      border-radius: var(--radius-md);
+      margin-bottom: var(--space-2);
+    }
+    
+    .color-box {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-neutral-300);
+    }
+    
+    .spacing-demo {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      margin-bottom: var(--space-2);
+    }
+    
+    .spacing-box {
+      background-color: var(--color-primary-blue);
+      color: var(--color-neutral-100);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--font-size-xs);
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  
+  <!-- Sidebar Navigation -->
+  <aside class="sidebar">
+    <div class="sidebar__header">
+      <div class="sidebar__logo">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+          <circle cx="16" cy="16" r="16" fill="var(--color-primary-blue)"/>
+          <path d="M16 8L20 16L16 24L12 16L16 8Z" fill="white"/>
+        </svg>
+        <span class="sidebar__brand">Stellar Raise</span>
+      </div>
+    </div>
+    <nav class="sidebar__nav">
+      <a href="#colors" class="sidebar__item sidebar__item--active">
+        <span class="sidebar__label">Design Tokens</span>
+      </a>
+      <a href="#buttons" class="sidebar__item">
+        <span class="sidebar__label">Buttons</span>
+      </a>
+      <a href="#forms" class="sidebar__item">
+        <span class="sidebar__label">Forms</span>
+      </a>
+      <a href="#tables" class="sidebar__item">
+        <span class="sidebar__label">Tables</span>
+      </a>
+    </nav>
+    <div class="sidebar__footer">
+      <div class="sidebar__security">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+          <path d="M8 0L2 3v5c0 3.5 2.5 6.5 6 7 3.5-.5 6-3.5 6-7V3L8 0z"/>
+        </svg>
+        <span class="sidebar__security-text">Component Showcase</span>
+      </div>
+      <div class="sidebar__version">v1.0.0</div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="has-sidebar has-bottom-nav">
+    <div class="container safe-area-top" style="padding-top: var(--space-8); padding-bottom: var(--space-16);">
+      
+      <h1 class="text-3xl font-bold mb-8">Stellar Raise Component Showcase</h1>
+      <p class="text-lg text-neutral mb-8">
+        A comprehensive showcase of all responsive design components and patterns.
+      </p>
+
+      <!-- Design Tokens Section -->
+      <section id="colors" class="showcase-section">
+        <h2 class="showcase-title">Design Tokens</h2>
+        
+        <h3 class="showcase-subtitle">Color Palette</h3>
+        <div class="color-swatch">
+          <div class="color-box" style="background-color: var(--color-primary-blue);"></div>
+          <div>
+            <div class="font-semibold">Primary Blue</div>
+            <code class="text-sm">#0066FF</code>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-box" style="background-color: var(--color-deep-navy);"></div>
+          <div>
+            <div class="font-semibold">Deep Navy</div>
+            <code class="text-sm">#0A1929</code>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-box" style="background-color: var(--color-success-green);"></div>
+          <div>
+            <div class="font-semibold">Success Green</div>
+            <code class="text-sm">#00C853</code>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-box" style="background-color: var(--color-error-red);"></div>
+          <div>
+            <div class="font-semibold">Error Red</div>
+            <code class="text-sm">#FF3B30</code>
+          </div>
+        </div>
+        
+        <h3 class="showcase-subtitle">Typography Scale</h3>
+        <div class="text-xs mb-2">Extra Small (xs)</div>
+        <div class="text-sm mb-2">Small (sm)</div>
+        <div class="text-base mb-2">Base</div>
+        <div class="text-lg mb-2">Large (lg)</div>
+        <div class="text-xl mb-2">Extra Large (xl)</div>
+        <div class="text-2xl mb-2">2X Large (2xl)</div>
+        <div class="text-3xl mb-2">3X Large (3xl)</div>
+        
+        <h3 class="showcase-subtitle">Spacing Scale</h3>
+        <div class="spacing-demo">
+          <div class="spacing-box" style="width: var(--space-1); height: var(--space-1);"></div>
+          <span class="text-sm">space-1 (4px)</span>
+        </div>
+        <div class="spacing-demo">
+          <div class="spacing-box" style="width: var(--space-2); height: var(--space-2);"></div>
+          <span class="text-sm">space-2 (8px)</span>
+        </div>
+        <div class="spacing-demo">
+          <div class="spacing-box" style="width: var(--space-4); height: var(--space-4);"></div>
+          <span class="text-sm">space-4 (16px)</span>
+        </div>
+        <div class="spacing-demo">
+          <div class="spacing-box" style="width: var(--space-6); height: var(--space-6);"></div>
+          <span class="text-sm">space-6 (24px)</span>
+        </div>
+        <div class="spacing-demo">
+          <div class="spacing-box" style="width: var(--space-8); height: var(--space-8);"></div>
+          <span class="text-sm">space-8 (32px)</span>
+        </div>
+      </section>
+
+      <!-- Buttons Section -->
+      <section id="buttons" class="showcase-section">
+        <h2 class="showcase-title">Buttons</h2>
+        
+        <h3 class="showcase-subtitle">Button Variants</h3>
+        <div class="flex flex-wrap gap-4 mb-6">
+          <button class="btn btn--primary">Primary Button</button>
+          <button class="btn btn--secondary">Secondary Button</button>
+          <button class="btn btn--danger">Danger Button</button>
+          <button class="btn btn--outline">Outline Button</button>
+        </div>
+        
+        <h3 class="showcase-subtitle">Button States</h3>
+        <div class="flex flex-wrap gap-4 mb-6">
+          <button class="btn btn--primary">Normal</button>
+          <button class="btn btn--primary" disabled>Disabled</button>
+        </div>
+        
+        <h3 class="showcase-subtitle">Full Width Button (Mobile)</h3>
+        <button class="btn btn--primary btn--full">Full Width Button</button>
+        
+        <h3 class="showcase-subtitle">Touch Target Verification</h3>
+        <p class="text-sm text-neutral mb-4">All buttons meet 44x44px minimum touch target size.</p>
+        <div class="flex gap-4">
+          <button class="btn btn--icon" aria-label="Icon button">
+            <svg class="btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M12 6v6l4 2"></path>
+            </svg>
+          </button>
+          <button class="btn btn--primary">
+            <svg class="btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 5v14M5 12h14"></path>
+            </svg>
+            Button with Icon
+          </button>
+        </div>
+      </section>
+
+      <!-- Forms Section -->
+      <section id="forms" class="showcase-section">
+        <h2 class="showcase-title">Form Components</h2>
+        
+        <form class="form">
+          <h3 class="showcase-subtitle">Text Inputs</h3>
+          <div class="form__group">
+            <label for="text-input" class="form__label form__label--required">Text Input</label>
+            <input type="text" id="text-input" class="form__input" placeholder="Enter text" />
+          </div>
+          
+          <div class="form__group">
+            <label for="email-input" class="form__label">Email Input</label>
+            <input type="email" id="email-input" class="form__input" placeholder="you@example.com" />
+            <span class="form__hint">We'll never share your email.</span>
+          </div>
+          
+          <div class="form__group">
+            <label for="error-input" class="form__label">Input with Error</label>
+            <input type="text" id="error-input" class="form__input form__input--error" value="Invalid value" />
+            <span class="form__error">
+              <svg class="form__error-icon" viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M12 8v4M12 16h.01" stroke="white" stroke-width="2"></path>
+              </svg>
+              This field is required
+            </span>
+          </div>
+          
+          <h3 class="showcase-subtitle">Textarea</h3>
+          <div class="form__group">
+            <label for="textarea" class="form__label">Description</label>
+            <textarea id="textarea" class="form__textarea" placeholder="Enter description"></textarea>
+          </div>
+          
+          <h3 class="showcase-subtitle">Select Dropdown</h3>
+          <div class="form__group">
+            <label for="select" class="form__label">Select Option</label>
+            <select id="select" class="form__select">
+              <option>Option 1</option>
+              <option>Option 2</option>
+              <option>Option 3</option>
+            </select>
+          </div>
+          
+          <h3 class="showcase-subtitle">Input with Prefix/Suffix</h3>
+          <div class="form__group">
+            <label for="amount" class="form__label">Amount</label>
+            <div class="form__input-group">
+              <span class="form__input-prefix">XLM</span>
+              <input type="number" id="amount" class="form__input" placeholder="0.00" />
+            </div>
+          </div>
+          
+          <h3 class="showcase-subtitle">Checkbox</h3>
+          <div class="form__group">
+            <label class="form__checkbox">
+              <input type="checkbox" id="checkbox1" />
+              <span>I agree to the terms and conditions</span>
+            </label>
+            <label class="form__checkbox">
+              <input type="checkbox" id="checkbox2" checked />
+              <span>Send me email notifications</span>
+            </label>
+          </div>
+          
+          <h3 class="showcase-subtitle">Toggle Switch</h3>
+          <div class="form__toggle">
+            <span class="form__toggle-label">Enable Two-Factor Authentication</span>
+            <label class="toggle-switch">
+              <input type="checkbox" />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          
+          <div class="form__toggle">
+            <span class="form__toggle-label">Profile Visibility (Enabled)</span>
+            <label class="toggle-switch">
+              <input type="checkbox" checked />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </form>
+      </section>
+
+      <!-- Tables Section -->
+      <section id="tables" class="showcase-section">
+        <h2 class="showcase-title">Data Display</h2>
+        
+        <h3 class="showcase-subtitle">Responsive Table</h3>
+        <p class="text-sm text-neutral mb-4">
+          Transforms to cards on mobile (< 768px), standard table on tablet/desktop.
+        </p>
+        
+        <div class="responsive-table-wrapper">
+          <table class="responsive-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Amount</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td data-label="Date">2026-02-20</td>
+                <td data-label="Type">Contribution</td>
+                <td data-label="Amount">500 XLM</td>
+                <td data-label="Status">
+                  <span class="status-badge status-badge--success">Success</span>
+                </td>
+              </tr>
+              <tr>
+                <td data-label="Date">2026-02-19</td>
+                <td data-label="Type">Withdrawal</td>
+                <td data-label="Amount">1,000 XLM</td>
+                <td data-label="Status">
+                  <span class="status-badge status-badge--success">Success</span>
+                </td>
+              </tr>
+              <tr>
+                <td data-label="Date">2026-02-18</td>
+                <td data-label="Type">Refund</td>
+                <td data-label="Amount">250 XLM</td>
+                <td data-label="Status">
+                  <span class="status-badge status-badge--pending">Pending</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        
+        <h3 class="showcase-subtitle">Transaction Cards</h3>
+        <div class="transaction-list">
+          <article class="transaction-card">
+            <div class="transaction-card__header">
+              <div class="transaction-card__type">Campaign Contribution</div>
+              <div class="transaction-card__amount transaction-card__amount--negative">-500 XLM</div>
+            </div>
+            <div class="transaction-card__details">
+              <div class="transaction-card__detail">
+                <span class="transaction-card__label">Date</span>
+                <span class="transaction-card__value">Feb 20, 2026</span>
+              </div>
+              <div class="transaction-card__detail">
+                <span class="transaction-card__label">Campaign</span>
+                <span class="transaction-card__value">Solar Energy Project</span>
+              </div>
+            </div>
+          </article>
+        </div>
+        
+        <h3 class="showcase-subtitle">Horizontal Scroll List (Mobile)</h3>
+        <p class="text-sm text-neutral mb-4">
+          Horizontal scroll on mobile, grid layout on tablet/desktop.
+        </p>
+        <div class="scroll-list">
+          <article class="scroll-list__item">
+            <h4 class="font-semibold mb-2">Campaign 1</h4>
+            <p class="text-sm text-neutral">Description of campaign</p>
+          </article>
+          <article class="scroll-list__item">
+            <h4 class="font-semibold mb-2">Campaign 2</h4>
+            <p class="text-sm text-neutral">Description of campaign</p>
+          </article>
+          <article class="scroll-list__item">
+            <h4 class="font-semibold mb-2">Campaign 3</h4>
+            <p class="text-sm text-neutral">Description of campaign</p>
+          </article>
+        </div>
+      </section>
+
+      <!-- Grid System Section -->
+      <section class="showcase-section">
+        <h2 class="showcase-title">Grid System</h2>
+        
+        <h3 class="showcase-subtitle">Responsive Grid</h3>
+        <p class="text-sm text-neutral mb-4">
+          4 columns (mobile), 8 columns (tablet), 12 columns (desktop)
+        </p>
+        
+        <div class="grid mb-6">
+          <div class="col-span-full col-span-md-4 col-span-lg-3" style="background-color: var(--color-neutral-200); padding: var(--space-4); border-radius: var(--radius-md);">
+            <div class="text-sm font-semibold">Column 1</div>
+            <div class="text-xs text-neutral">Full / 4 / 3</div>
+          </div>
+          <div class="col-span-full col-span-md-4 col-span-lg-3" style="background-color: var(--color-neutral-200); padding: var(--space-4); border-radius: var(--radius-md);">
+            <div class="text-sm font-semibold">Column 2</div>
+            <div class="text-xs text-neutral">Full / 4 / 3</div>
+          </div>
+          <div class="col-span-full col-span-md-4 col-span-lg-3" style="background-color: var(--color-neutral-200); padding: var(--space-4); border-radius: var(--radius-md);">
+            <div class="text-sm font-semibold">Column 3</div>
+            <div class="text-xs text-neutral">Full / 4 / 3</div>
+          </div>
+          <div class="col-span-full col-span-md-4 col-span-lg-3" style="background-color: var(--color-neutral-200); padding: var(--space-4); border-radius: var(--radius-md);">
+            <div class="text-sm font-semibold">Column 4</div>
+            <div class="text-xs text-neutral">Full / 4 / 3</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Utility Classes Section -->
+      <section class="showcase-section">
+        <h2 class="showcase-title">Utility Classes</h2>
+        
+        <h3 class="showcase-subtitle">Responsive Display</h3>
+        <div class="mb-4">
+          <div class="block md:hidden p-4 bg-primary text-white rounded">
+            Visible on mobile only
+          </div>
+          <div class="hidden md:block p-4 bg-success text-white rounded">
+            Visible on tablet and desktop
+          </div>
+        </div>
+        
+        <h3 class="showcase-subtitle">Flexbox Utilities</h3>
+        <div class="flex items-center justify-between p-4 bg-neutral rounded mb-4">
+          <span>Left</span>
+          <span>Center</span>
+          <span>Right</span>
+        </div>
+        
+        <h3 class="showcase-subtitle">Spacing Utilities</h3>
+        <div class="p-4 mb-4 bg-neutral rounded">
+          <div class="p-2 mb-2 bg-white rounded">Padding 2</div>
+          <div class="p-4 mb-4 bg-white rounded">Padding 4</div>
+          <div class="p-6 bg-white rounded">Padding 6</div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <div class="bottom-nav__container">
+      <a href="#colors" class="bottom-nav__item bottom-nav__item--active">
+        <svg class="bottom-nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+        </svg>
+        <span class="bottom-nav__label">Tokens</span>
+      </a>
+      <a href="#buttons" class="bottom-nav__item">
+        <svg class="bottom-nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+        </svg>
+        <span class="bottom-nav__label">Buttons</span>
+      </a>
+      <a href="#forms" class="bottom-nav__item">
+        <svg class="bottom-nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+        </svg>
+        <span class="bottom-nav__label">Forms</span>
+      </a>
+      <a href="#tables" class="bottom-nav__item">
+        <svg class="bottom-nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7"></rect>
+          <rect x="14" y="3" width="7" height="7"></rect>
+          <rect x="14" y="14" width="7" height="7"></rect>
+          <rect x="3" y="14" width="7" height="7"></rect>
+        </svg>
+        <span class="bottom-nav__label">Tables</span>
+      </a>
+    </div>
+  </nav>
+
+</body>
+</html>

@@ -1,11 +1,4 @@
 //! Authorization tests for the crowdfund contract.
-//!
-//! These tests verify that authorization checks are properly enforced,
-//! ensuring only the correct addresses can call specific functions.
-//!
-//! Note: The contract uses require_auth() to enforce that:
-//! - Only the creator can call initialize, withdraw, cancel, update_metadata
-//! - Only contributors can contribute (with their own address authorizing)
 
 use soroban_sdk::{
     testutils::{Address as _, Ledger},
@@ -14,10 +7,6 @@ use soroban_sdk::{
 
 use crate::{CrowdfundContract, CrowdfundContractClient};
 
-// ── Setup Helpers ───────────────────────────────────────────────────────────
-
-/// Set up a fresh environment with mock_all_auths.
-/// Each test will verify authorization for specific functions.
 fn setup_env() -> (
     Env,
     CrowdfundContractClient<'static>,
@@ -39,98 +28,135 @@ fn setup_env() -> (
     let creator = Address::generate(&env);
     token_admin_client.mint(&creator, &10_000_000);
 
-    (env, client, creator, token_address, token_admin.clone())
+    (env, client, creator, token_address, token_admin)
 }
 
-/// Helper to mint tokens to an arbitrary contributor.
-fn mint_to(env: &Env, token_address: &Address, admin: &Address, to: &Address, amount: i128) {
-    let admin_client = token::StellarAssetClient::new(env, token_address);
-    admin_client.mint(to, &amount);
-    let _ = admin;
+fn mint_to(env: &Env, token_address: &Address, to: &Address, amount: i128) {
+    token::StellarAssetClient::new(env, token_address).mint(to, &amount);
 }
 
-// ── Authorization Tests ─────────────────────────────────────────────────────
+#[test]
+fn test_initialize_requires_creator_auth() {
+    let (env, client, creator, token_address, admin) = setup_env();
+    let deadline = env.ledger().timestamp() + 3600;
 
-/// Test: Only creator can withdraw funds
-///
-/// Title: Withdraw requires creator authorization
-///
-/// Description: Verifies that the withdraw function can only be called by the
-/// campaign creator after the deadline is met. The contract's withdraw function
-/// calls `creator.require_auth()` which ensures only the campaign creator can
-/// withdraw the raised funds.
+    client.initialize(
+        &admin,
+        &creator,
+        &token_address,
+        &1_000_000,
+        &deadline,
+        &1_000,
+        &None::<i128>,
+        &None,
+        &None,
+        &None,
+    );
+
+    assert_eq!(client.goal(), 1_000_000);
+    assert_eq!(client.deadline(), deadline);
+    assert_eq!(client.min_contribution(), 1_000);
+    assert_eq!(client.total_raised(), 0);
+}
+
+
+    client.initialize(
+        &admin,
+        &creator,
+        &token_address,
+        &1_000_000,
+        &deadline,
+        &1_000,
+        &None,
+        &None,
+        &None,
+    );
+
+    assert_eq!(client.goal(), 1_000_000);
+    assert_eq!(client.deadline(), deadline);
+    assert_eq!(client.min_contribution(), 1_000);
+    assert_eq!(client.total_raised(), 0);
+}
+
+/// withdraw requires creator auth and succeeds after deadline when goal met.
 #[test]
 fn test_withdraw_only_creator_can_withdraw() {
     let (env, client, creator, token_address, admin) = setup_env();
-
     let deadline = env.ledger().timestamp() + 3600;
     let goal: i128 = 1_000_000;
-    let min_contribution: i128 = 1_000;
 
-    // Initialize requires creator's authorization
     client.initialize(
+        &admin,
         &creator,
         &token_address,
         &goal,
         &deadline,
+        &1_000,
+        &None::<i128>,
+        &None,
+        &None,
         &min_contribution,
+        &None,
+        &None,
+        &None,
+        &min_contribution,
+        &None,
+        &None,
     );
 
-    // Create a contributor and make a contribution
     let contributor = Address::generate(&env);
-    mint_to(&env, &token_address, &admin, &contributor, 1_000_000);
-    
-    // Contribute requires the contributor's own authorization
-    client.contribute(&contributor, &1_000_000);
+    mint_to(&env, &token_address, &contributor, goal);
+    client.contribute(&contributor, &goal);
 
-    assert_eq!(client.total_raised(), goal);
-
-    // Move past deadline
     env.ledger().set_timestamp(deadline + 1);
-
-    // Withdraw requires the creator's authorization (enforced by contract)
+    client.finalize();
     client.withdraw();
 
-    // Verify the withdrawal worked correctly
     assert_eq!(client.total_raised(), 0);
-    
+
     let token_client = token::Client::new(&env, &token_address);
-    assert_eq!(token_client.balance(&creator), 10_000_000 + 1_000_000);
+    assert_eq!(token_client.balance(&creator), 10_000_000 + goal);
 }
 
-/// Test: Contribute requires contributor's own auth
-///
-/// Title: Contribute authorization must come from contributor
-///
-/// Description: The contract's contribute function calls `contributor.require_auth()`,
-/// ensuring that only the contributor's own address can authorize a contribution.
-/// A third party cannot contribute on behalf of another address.
+    // creator started with 10_000_000; receives goal back
+    assert_eq!(token_client.balance(&creator), 10_000_000 + goal);
+}
+
 #[test]
 fn test_contribute_requires_own_auth() {
     let (env, client, creator, token_address, admin) = setup_env();
-
     let deadline = env.ledger().timestamp() + 3600;
-    let goal: i128 = 1_000_000;
-    let min_contribution: i128 = 1_000;
 
-    // Initialize requires creator's authorization
     client.initialize(
+        &admin,
         &creator,
         &token_address,
-        &goal,
+        &1_000_000,
         &deadline,
+        &1_000,
+        &None::<i128>,
+        &None,
+        &None,
+        &goal,
+        &(goal * 2),
+        &deadline,
+        &1_000,
+        &None,
+        &None,
+        &None,
+        &None,
+        &None,
         &min_contribution,
+        &None,
+        &None,
     );
 
-    // Test contribution with proper authorization
     let contributor = Address::generate(&env);
-    mint_to(&env, &token_address, &admin, &contributor, 1_000_000);
-    
-    // The contract requires contributor.require_auth() - only the contributor
-    // address can authorize their own contribution
+    mint_to(&env, &token_address, &contributor, 1_000_000);
     client.contribute(&contributor, &1_000_000);
 
     assert_eq!(client.total_raised(), 1_000_000);
+    assert_eq!(client.contribution(&contributor), 1_000_000);
     
     // Verify the contribution was recorded for the correct contributor
     let contribution = client.contribution(&contributor);
@@ -158,8 +184,14 @@ fn test_initialize_requires_creator_auth() {
         &creator,
         &token_address,
         &goal,
+        &(goal * 2),
         &deadline,
         &min_contribution,
+        &None,
+        &deadline,
+        &min_contribution,
+        &None,
+        &None,
     );
 
     // Verify initialization was successful

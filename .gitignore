@@ -6,10 +6,87 @@ Cargo.lock
 .idea/
 *.swp
 *.swo
+*.orig
 
 # OS
 .DS_Store
 Thumbs.db
+.DS_Store?
+._*
 
-# Soroban
+# Soroban / Stellar
+.soroban/
+# Soroban / Rust
+# Soroban / Stellar
+.soroban/
 *.d
+*.wasm
+!contracts/factory/wasm/crowdfund.wasm
+.kiro/
+.soroban/
+
+# Kiro (local settings only, specs are tracked)
+.kiro/settings/
+.kiro/hooks/
+
+# Test artifacts
+contracts/*/test_snapshots/
+proptest-regressions/
+
+# JS / Node
+node_modules/
+coverage/
+dist/
+build/
+.next/
+.cache/
+*.tsbuildinfo
+pnpm-lock.yaml
+package-lock.json
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Misc
+*.bak
+*.tmp
+# Kiro
+.kiro/
+
+# Test artifacts
+contracts/*/test_snapshots/
+proptest-regressions/
+
+# JS / Node
+node_modules/
+coverage/
+dist/
+build/
+.next/
+.cache/
+*.tsbuildinfo
+pnpm-lock.yaml
+package-lock.json
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Misc
+*.bak
+*.tmp
