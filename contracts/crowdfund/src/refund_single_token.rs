@@ -18,13 +18,27 @@
 //!    the function returns `ContractError::Overflow` rather than wrapping.
 //! 4. **Direction lock** — The token transfer explicitly uses the contract's
 //!    address as the sender and the contributor as the recipient.
+//! 5. **Token interface** — Transfers use Soroban [`token::Client`]; the campaign
+//!    must hold sufficient balance; malicious tokens are out of scope (standard
+//!    Stellar asset / SAC assumptions).
+//!
+//! ## Dependencies (review checklist)
+//!
+//! - [`crate::DataKey`] — persistent `Contribution(addr)` and instance `Token`, `TotalRaised`, `Status`.
+//! - [`crate::ContractError`] — `NothingToRefund`, `Overflow`.
+//! - `soroban_sdk::token` — SEP-41-style `transfer(from, to, amount)`.
 
 use soroban_sdk::{token, Address, Env};
 use crate::{ContractError, DataKey, Status};
 
 // ── Storage helpers ───────────────────────────────────────────────────────────
 
-/// Read the stored contribution amount for `contributor` (0 if absent).
+/// @title Get contribution balance
+/// @notice Reads `DataKey::Contribution(contributor)` from persistent storage; `0` if missing.
+/// @param env Soroban environment (caller must be in correct contract context when used with storage).
+/// @param contributor Account whose recorded contribution is queried.
+/// @return Recorded amount in token smallest units.
+/// @custom:security View-only; does not authenticate `contributor`.
 pub fn get_contribution(env: &Env, contributor: &Address) -> i128 {
     env.storage()
         .persistent()
@@ -32,14 +46,12 @@ pub fn get_contribution(env: &Env, contributor: &Address) -> i128 {
         .unwrap_or(0)
 }
 
-/// Low-level refund helper: transfer `amount` from contract to `contributor`
-/// and zero the contribution record. Returns the amount transferred.
-///
-/// @notice Transfers `amount` tokens from `contract_address` to `contributor`.
-/// @notice Skips transfers where `amount <= 0` to prevent gas waste on no-op calls.
-/// @dev    Keeping this in one place prevents parameter-order typos at call sites.
-/// @dev    Emits debug event before transfer for observability.
-/// Does **not** check campaign status or auth — callers are responsible.
+/// @title Legacy single-contributor refund helper
+/// @notice Zeros `Contribution(contributor)` then transfers `amount` via [`refund_single_transfer`].
+/// @notice Returns the balance that *was* stored (may be `0`); skips transfer when `amount <= 0` after read.
+/// @dev Prefer the public `CrowdfundContract::refund_single` path (`validate` → `execute_refund_single`) for auth + status.
+/// @dev Kept for tests and any internal batch paths that already validated state.
+/// @custom:security Does **not** check `Status::Expired` or `require_auth`; callers must enforce invariants.
 pub fn refund_single(env: &Env, token_address: &Address, contributor: &Address) -> i128 {
     let amount = get_contribution(env, contributor);
     if amount > 0 {
@@ -59,14 +71,14 @@ pub fn refund_single(env: &Env, token_address: &Address, contributor: &Address) 
 
 // ── Transfer primitive ────────────────────────────────────────────────────────
 
-/// Transfer `amount` tokens from the contract to `contributor`.
-///
-/// @notice Direction is fixed: contract → contributor.
-/// @dev    Single call site prevents parameter-order typos.
-/// @param token_client Pre-built token client.
-/// @param contract_address The crowdfund contract's own address.
-/// @param contributor Recipient of the refund.
-/// @param amount Token amount to transfer (must be > 0).
+/// @title Token transfer primitive for refunds
+/// @notice Invokes `token_client.transfer(contract_address, contributor, amount)`; no-op if `amount <= 0`.
+/// @dev Publishes a debug event before transfer for testability and off-chain indexing.
+/// @param token_client Soroban token client bound to the campaign asset.
+/// @param contract_address Must equal `env.current_contract_address()` at the call site (funds source).
+/// @param contributor Refund recipient.
+/// @param amount Amount in token smallest units.
+/// @custom:security Caller must ensure `contract_address` is the crowdfund contract and holds balance.
 pub fn refund_single_transfer(
     token_client: &token::Client,
     contract_address: &Address,
@@ -88,22 +100,18 @@ pub fn refund_single_transfer(
 
 // ── Precondition guard ────────────────────────────────────────────────────────
 
-/// Validate all preconditions for a `refund_single` call.
-///
-/// Returns the contribution amount owed to `contributor` on success, or the
-/// appropriate `ContractError` variant on failure.
-///
-/// @notice Does **not** mutate any state — safe to call speculatively.
-/// @param env Soroban environment.
-/// @param contributor The address requesting a refund.
-/// @return `Ok(amount)` when the refund is valid, `Err(ContractError)` otherwise.
-///
-/// # Errors
-/// * `ContractError::CampaignStillActive` — campaign has not been finalized as `Expired`.
-/// * `ContractError::NothingToRefund`     — contributor has no balance on record.
+/// @title Refund precondition guard
+/// @notice Read-only: validates `Status::Expired` and non-zero contribution.
+/// @param env Soroban environment (instance + persistent storage).
+/// @param contributor Address requesting a refund.
+/// @return `Ok(amount)` when status is `Expired` and contribution > 0.
+/// @return `Err(ContractError::NothingToRefund)` when contribution record is zero or missing.
 ///
 /// # Panics
-/// * `"campaign must be in Expired state to refund"` when status is not `Expired`.
+/// * `"campaign must be in Expired state to refund"` — status is `Active`, `Succeeded`, or `Cancelled`
+///   (callers should use [`crate::CrowdfundContract::refund_available`] for a Result-based preview where applicable).
+///
+/// @custom:security Does not authenticate; [`crate::CrowdfundContract::refund_single`] wraps with `require_auth`.
 pub fn validate_refund_preconditions(
     env: &Env,
     contributor: &Address,
@@ -127,16 +135,19 @@ pub fn validate_refund_preconditions(
 
 // ── Atomic CEI execution ──────────────────────────────────────────────────────
 
-/// Execute a single contributor refund using the CEI pattern.
-///
-/// Caller **must** have already called `contributor.require_auth()` and
-/// `validate_refund_preconditions` (or be certain preconditions hold).
-///
-/// @notice Storage is zeroed **before** the token transfer (CEI).
+/// @title Atomic single-refund (CEI)
+/// @notice Zeros contribution, updates `total_raised`, transfers tokens, emits `("campaign","refund_single")`.
+/// @dev Caller **must** have invoked `contributor.require_auth()` and passed `validate_refund_preconditions`
+///      (or equivalent guarantees). **`amount` must equal the contribution that was stored**; passing a
+///      mismatched value can corrupt accounting (contribution cleared before `total_raised` update) even when
+///      signed `checked_sub` does not return [`ContractError::Overflow`].
 /// @param env Soroban environment.
-/// @param contributor The address to refund.
-/// @param amount The amount returned by `validate_refund_preconditions`.
-/// @return `Ok(())` on success, `Err(ContractError::Overflow)` on underflow.
+/// @param contributor Refund recipient (must match keyed `Contribution`).
+/// @param amount Refund quantity; must match prior stored contribution for consistent accounting.
+/// @return `Ok(())` on success, `Err(ContractError::Overflow)` if `checked_sub` overflows `i128`
+///      (pathological totals; normal refunds use validated amounts).
+///
+/// @custom:security CEI prevents re-entrancy double-spend; token transfer is last.
 pub fn execute_refund_single(
     env: &Env,
     contributor: &Address,

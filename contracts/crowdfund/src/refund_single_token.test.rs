@@ -7,7 +7,9 @@
 //! - Direction lock: `refund_single_transfer` always transfers contract →
 //!   contributor; balance assertions confirm direction.
 //! - Overflow protection: `execute_refund_single` uses `checked_sub` on
-//!   `total_raised`; the large-amount test exercises this path.
+//!   `total_raised` (errors only on true `i128` overflow; validated amounts prevent this).
+//! - `get_contribution`, `refund_single`, and `refund_single_transfer` are covered for
+//!   dependency clarity and `amount <= 0` skips.
 
 #![cfg(test)]
 
@@ -17,7 +19,10 @@ use soroban_sdk::{
 };
 
 use crate::{
-    refund_single_token::{execute_refund_single, validate_refund_preconditions},
+    refund_single_token::{
+        execute_refund_single, get_contribution, refund_single, refund_single_transfer,
+        validate_refund_preconditions,
+    },
     ContractError, CrowdfundContract, CrowdfundContractClient,
 };
 
@@ -48,8 +53,81 @@ fn init(
     deadline: u64,
 ) {
     client.initialize(
-        creator, creator, token, &goal, &deadline, &1_000, &None, &None, &None,
+        creator,
+        creator,
+        token,
+        &goal,
+        &deadline,
+        &1_000,
+        &None,
+        &None,
+        &None,
+        &None,
     );
+}
+
+// ── get_contribution / refund_single_transfer / refund_single ────────────────
+
+/// @test get_contribution returns 0 for a stranger with no record.
+#[test]
+fn test_get_contribution_zero_without_record() {
+    let (env, client, creator, token) = setup();
+    let deadline = env.ledger().timestamp() + 3_600;
+    init(&client, &creator, &token, 1_000_000, deadline);
+    let stranger = Address::generate(&env);
+    let v = env.as_contract(&client.address, || get_contribution(&env, &stranger));
+    assert_eq!(v, 0);
+}
+
+/// @test get_contribution returns stored amount after contribute.
+#[test]
+fn test_get_contribution_returns_balance_after_contribute() {
+    let (env, client, creator, token) = setup();
+    let deadline = env.ledger().timestamp() + 3_600;
+    init(&client, &creator, &token, 1_000_000, deadline);
+    let alice = Address::generate(&env);
+    mint(&env, &token, &alice, 12_345);
+    client.contribute(&alice, &12_345);
+    let v = env.as_contract(&client.address, || get_contribution(&env, &alice));
+    assert_eq!(v, 12_345);
+}
+
+/// @test refund_single_transfer returns early for non-positive amount (no transfer).
+#[test]
+fn test_refund_single_transfer_skips_non_positive() {
+    let (env, client, creator, token) = setup();
+    let deadline = env.ledger().timestamp() + 3_600;
+    init(&client, &creator, &token, 1_000_000, deadline);
+    let alice = Address::generate(&env);
+    mint(&env, &token, &alice, 1_000);
+    client.contribute(&alice, &1_000);
+    let tc = token::Client::new(&env, &token);
+    let before = tc.balance(&alice);
+    env.as_contract(&client.address, || {
+        refund_single_transfer(&tc, &env.current_contract_address(), &alice, 0);
+        refund_single_transfer(&tc, &env.current_contract_address(), &alice, -1);
+    });
+    assert_eq!(tc.balance(&alice), before);
+}
+
+/// @test Legacy refund_single zeros storage and returns prior amount.
+#[test]
+fn test_refund_single_legacy_zeros_and_transfers() {
+    let (env, client, creator, token) = setup();
+    let deadline = env.ledger().timestamp() + 3_600;
+    init(&client, &creator, &token, 1_000_000, deadline);
+    let alice = Address::generate(&env);
+    mint(&env, &token, &alice, 5_000);
+    client.contribute(&alice, &5_000);
+    let tc = token::Client::new(&env, &token);
+    let bal_before = tc.balance(&alice);
+    let (returned, stored) = env.as_contract(&client.address, || {
+        let r = refund_single(&env, &token, &alice);
+        (r, get_contribution(&env, &alice))
+    });
+    assert_eq!(returned, 5_000);
+    assert_eq!(stored, 0);
+    assert_eq!(tc.balance(&alice), bal_before + 5_000);
 }
 
 // ── validate_refund_preconditions ─────────────────────────────────────────────
@@ -375,3 +453,4 @@ fn test_execute_does_not_affect_other_contributors() {
 
     assert_eq!(client.contribution(&bob), 15_000);
 }
+

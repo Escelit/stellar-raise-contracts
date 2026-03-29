@@ -1,0 +1,178 @@
+/**
+ * @title Milestone celebration insights — presentation layer
+ * @notice Layout and tokens aligned with celebration_standardization CSS variables where possible
+ */
+
+.milestone-insights {
+  --mi-primary: var(--celebration-primary, #6366f1);
+  --mi-secondary: var(--celebration-secondary, #8b5cf6);
+  --mi-success: var(--celebration-success, #10b981);
+  --mi-border: var(--celebration-border, #e5e7eb);
+  --mi-text: var(--celebration-text, #111827);
+  --mi-muted: #6b7280;
+  --mi-surface: var(--celebration-background, #f9fafb);
+
+  max-width: 28rem;
+  padding: 1.25rem;
+  border: 1px solid var(--mi-border);
+  border-radius: 12px;
+  background: var(--mi-surface);
+  color: var(--mi-text);
+  font-family: system-ui, sans-serif;
+}
+
+.milestone-insights__title {
+  margin: 0 0 1rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.milestone-insights__metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(5.25rem, 1fr));
+  gap: 0.75rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.milestone-insights__metric {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.milestone-insights__metric-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--mi-muted);
+}
+
+.milestone-insights__metric-value {
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.milestone-insights__progress-wrap {
+  position: relative;
+  margin-bottom: 0.35rem;
+}
+
+.milestone-insights__rail {
+  position: relative;
+  height: 1.5rem;
+  margin-top: 0.25rem;
+}
+
+.milestone-insights__rail-tick {
+  position: absolute;
+  bottom: 0;
+  width: 2px;
+  height: 10px;
+  background: var(--mi-border);
+  transform: translateX(-50%);
+  border-radius: 1px;
+}
+
+.milestone-insights__rail-tick--achieved {
+  background: var(--mi-success);
+}
+
+.milestone-insights__rail-label {
+  position: absolute;
+  top: 0;
+  font-size: 0.65rem;
+  color: var(--mi-muted);
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.milestone-insights__bar {
+  width: 100%;
+  height: 12px;
+  background: #e5e7eb;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.milestone-insights__bar-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.35s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .milestone-insights__bar-fill {
+    transition: none;
+  }
+}
+
+.milestone-insights__bar-fill--active {
+  background: var(--mi-primary);
+}
+
+.milestone-insights__bar-fill--done {
+  background: var(--mi-success);
+}
+
+.milestone-insights__sparkline-wrap {
+  margin-top: 1rem;
+}
+
+.milestone-insights__sparkline-title {
+  margin: 0 0 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.milestone-insights__sparkline {
+  display: block;
+  width: 100%;
+  height: 4rem;
+  color: var(--mi-secondary);
+}
+
+.milestone-insights__insights-title {
+  margin: 1rem 0 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.milestone-insights__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.milestone-insights__insight {
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid var(--mi-border);
+  background: #fff;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.milestone-insights__insight--success {
+  border-color: rgba(16, 185, 129, 0.45);
+  background: rgba(16, 185, 129, 0.06);
+}
+
+.milestone-insights__insight--warning {
+  border-color: rgba(245, 158, 11, 0.5);
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.milestone-insights__insight--info {
+  border-color: rgba(99, 102, 241, 0.35);
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.milestone-insights__insight-headline {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.2rem;
+}

@@ -19,7 +19,9 @@
   },
   "include": [
     "frontend/**/*",
-    "contracts/**/*"
+    "contracts/**/*",
+    "milestone_insights.tsx",
+    "milestone_insights.test.tsx"
   ],
   "exclude": [
     "node_modules"

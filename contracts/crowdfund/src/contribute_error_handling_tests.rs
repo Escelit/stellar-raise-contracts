@@ -103,7 +103,6 @@ fn contribute_accumulates_multiple_contributions() {
 #[test]
 fn contribute_to_finalized_campaign_returns_not_active() {
     let (env, client, contributor) = setup();
-    // Advance past deadline and finalize (goal not met → Expired)
     env.ledger()
         .set_timestamp(env.ledger().timestamp() + DEADLINE_OFFSET + 1);
     client.finalize();

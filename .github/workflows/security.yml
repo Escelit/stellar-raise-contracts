@@ -47,3 +47,19 @@ jobs:
 
       - name: Run validation test suite
         run: ./scripts/security_compliance_validation.test.sh
+
+      - name: Make security documentation scripts executable
+        run: chmod +x .github/scripts/security_documentation.sh .github/scripts/security_documentation.test.sh
+
+      - name: Automated security documentation
+        run: bash .github/scripts/security_documentation.sh
+
+      - name: Run security documentation tests
+        run: bash .github/scripts/security_documentation.test.sh
+
+      - name: Upload security documentation artefacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-docs
+          path: security-docs/

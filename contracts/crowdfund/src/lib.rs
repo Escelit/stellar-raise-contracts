@@ -30,12 +30,11 @@ pub mod stream_processing_optimization;
 pub mod withdraw_event_emission;
 pub mod loop_optimization;
 pub mod security_compliance_automation;
+pub mod security_compliance_validation;
 pub mod security_analytics;
 pub mod conditional_optimization;
 pub mod batch_processing_optimization;
-pub mod access_logging;
-
-pub mod parallel
+pub mod state_compression;
 
 use crate::reentrancy_guard::{enter_transfer, exit_transfer, protected_transfer};
 
@@ -107,6 +106,9 @@ mod stream_processing_optimization_test;
 #[path = "security_compliance_automation.test.rs"]
 mod security_compliance_automation_test;
 #[cfg(test)]
+#[path = "security_compliance_validation.test.rs"]
+mod security_compliance_validation_test;
+#[cfg(test)]
 #[path = "role_based_access.test.rs"]
 mod role_based_access_test;
 #[cfg(test)]
@@ -118,8 +120,8 @@ mod conditional_optimization_test;
 #[path = "batch_processing_optimization.test.rs"]
 mod batch_processing_optimization_test;
 #[cfg(test)]
-#[path = "access_logging.test.rs"]
-mod access_logging_test;
+#[path = "state_compression.test.rs"]
+mod state_compression_test;
 
 // --- Constants ---
 const CONTRACT_VERSION: u32 = 3;

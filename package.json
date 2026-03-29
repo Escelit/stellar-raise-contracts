@@ -5,6 +5,8 @@
     "optimize:svg": "svgo --folder frontend/public/images/ --recursive --multipass --config svgo.config.js",
     "test": "jest",
     "test:coverage": "jest --coverage",
+    "coverage:monitor": "bash scripts/code_coverage_monitoring.sh",
+    "coverage:monitor:enforce": "bash scripts/code_coverage_monitoring.sh --enforce",
     "test:watch": "jest --watch",
     "lint": "tsc --noEmit",
     "format": "prettier --write \"frontend/**/*.ts\" \"frontend/**/*.tsx\"",
